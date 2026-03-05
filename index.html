@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="coi-serviceworker.js"></script>
+    <script src="https://cxrtnc.leaningtech.com/1.2.2/cx.js"></script>
+    
+    <title>Android Runner</title>
+    <style>
+        body { margin: 0; background: #121212; color: #00ff00; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        #ui { z-index: 10; background: rgba(0,0,0,0.8); padding: 20px; border: 1px solid #333; border-radius: 8px; text-align: center; }
+        canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: none; }
+        .btn { background: #00ff00; color: black; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        #status { margin-top: 15px; font-size: 14px; color: #888; }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <h2>Android Runner v2026</h2>
+        <p>Upload a 32-bit Android ISO to begin</p>
+        <input type="file" id="fileInput" accept=".iso">
+        <div id="status">Ready to boot.</div>
+    </div>
+
+    <canvas id="display"></canvas>
+
+    <script type="module">
+        const fileInput = document.getElementById('fileInput');
+        const status = document.getElementById('status');
+        const ui = document.getElementById('ui');
+        const canvas = document.getElementById('display');
+
+        fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            status.innerText = "Setting up Virtual Machine...";
+            ui.style.opacity = "0.5";
+
+            try {
+                // 1. Create the Device from any local file
+                const isoDevice = await CheerpX.HttpBytesDevice.create(URL.createObjectURL(file));
+
+                // 2. the Engine
+                const cx = await CheerpX.Linux.create({
+                    mounts: [
+                        { type: "ext2", path: "/", dev: isoDevice },
+                        { type: "devs", path: "/dev" }
+                    ]
+                });
+
+                // 3. Attach the display
+                canvas.style.display = "block";
+                ui.style.display = "none";
+                cx.setKmsCanvas(canvas);
+
+                // 4. Boot Android (using standard x86 flags)
+                status.innerText = "Booting Android";
+                await cx.run("/kernel", [
+                    "init=/init", 
+                    "androidboot.selinux=permissive", 
+                    "xforcevesa", 
+                    "SRC=/", 
+                    "quiet"
+                ]);
+
+            } catch (err) {
+                ui.style.opacity = "1";
+                status.innerText = "Error: " + err.message;
+                console.error(err);
+            }
+        };
+    </script>
+</body>
+</html>
