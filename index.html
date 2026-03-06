@@ -4,49 +4,51 @@
     <meta charset="UTF-8">
     <script src="coi-serviceworker.js"></script>
     <script src="https://cxrtnc.leaningtech.com/1.2.2/cx.js"></script>
-    <title>Chromandr.io | v4.5</title>
+    <title>Chromandr.io | Ultra-Stable</title>
     <style>
         body { margin: 0; background: #000; color: #00ff41; font-family: monospace; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        #ui { border: 1px solid #333; padding: 30px; background: #0a0a0a; text-align: center; border-radius: 12px; width: 400px; }
+        #ui { border: 1px solid #222; padding: 25px; background: #0a0a0a; text-align: center; width: 380px; }
         #canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: none; background: #000; }
         .ok { color: #00ff41; } .err { color: #ff4444; }
-        button { background: #00ff41; color: #000; border: none; padding: 15px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
+        button { background: #222; color: #fff; border: 1px solid #444; padding: 10px; cursor: pointer; width: 100%; margin-top: 10px; }
     </style>
 </head>
 <body>
-
     <div id="ui">
-        <h1 style="color:white; margin:0 0 10px 0;">CHROMANDR.IO</h1>
-        <div style="font-size:11px; margin-bottom:20px;">
-            HEADERS: <span id="h">...</span> | ENGINE: <span id="e">...</span> | RAM: <span id="r">...</span>
+        <h2 style="color:white; margin:0;">CHROMANDR.IO</h2>
+        <div style="font-size:10px; margin: 10px 0; color:#666;">
+            HEADERS: <span id="h">...</span> | ENGINE: <span id="e">...</span>
         </div>
-        
-        <p>Select your 358MB Android ISO:</p>
+        <p style="font-size:12px;">USE 358MB ISO ONLY</p>
         <input type="file" id="iso" accept=".iso">
-        <div id="msg" style="margin: 15px 0; font-weight:bold;">READY</div>
-        
-        <button onclick="location.reload(true)">HARD REFRESH SYSTEM</button>
+        <div id="msg" style="margin: 15px 0; font-weight:bold; font-size:14px;">READY</div>
+        <button onclick="location.reload(true)">CLEAR CACHE & REFRESH</button>
     </div>
-
     <canvas id="canvas"></canvas>
 
     <script type="module">
         const h = document.getElementById('h'); const e = document.getElementById('e');
-        const r = document.getElementById('r'); const msg = document.getElementById('msg');
+        const msg = document.getElementById('msg'); const ui = document.getElementById('ui');
 
         if (window.crossOriginIsolated) { h.innerText = "OK"; h.className = "ok"; } 
         else { h.innerText = "WAIT"; h.className = "err"; }
 
         window.onload = () => {
             if (typeof CheerpX !== "undefined") { e.innerText = "READY"; e.className = "ok"; }
-            if (navigator.deviceMemory) r.innerText = navigator.deviceMemory + "GB";
         };
 
         document.getElementById('iso').onchange = async (evt) => {
             const file = evt.target.files[0];
             if (!file) return;
 
-            msg.innerText = "STARTING VM (PLEASE WAIT 60-120S)...";
+            // Stop if you try the large ISO that crashed you before
+            if (file.size > 500000000) {
+                msg.innerText = "ERROR: FILE TOO LARGE";
+                msg.className = "err";
+                return;
+            }
+
+            msg.innerText = "BOOTING... (STAY ON THIS TAB)";
             msg.style.color = "#ffaa00";
             
             try {
@@ -58,27 +60,25 @@
                         { type: "ext2", path: "/", dev: isoDevice },
                         { type: "devs", path: "/dev" }
                     ],
-                    // FIX: Double the timeout for 4GB RAM devices
-                    timeout: 120000 
+                    timeout: 180000 // Extended to 3 minutes for 4GB RAM
                 });
 
-                document.getElementById('ui').style.display = 'none';
+                ui.style.display = 'none';
                 const canvas = document.getElementById('canvas');
                 canvas.style.display = 'block';
                 cx.setKmsCanvas(canvas);
 
-                // FIX: Force basic graphics to prevent the freeze
                 await cx.run("/kernel", [
                     "init=/init",
                     "androidboot.hardware=android_x86",
                     "video=-16",
-                    "EXTMOD=vesa",
                     "xforcevesa",
                     "quiet"
                 ]);
             } catch (err) {
-                msg.innerText = "BOOT ERROR: " + (err.message || "Connection Lost");
-                msg.style.color = "#ff4444";
+                msg.innerText = "CONNECTION LOST: REFRESH WINDOW";
+                msg.className = "err";
+                console.error(err);
             }
         };
     </script>
