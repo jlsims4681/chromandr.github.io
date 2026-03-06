@@ -4,88 +4,67 @@
     <meta charset="UTF-8">
     <script src="coi-serviceworker.js"></script>
     <script src="https://cxrtnc.leaningtech.com/1.2.2/cx.js"></script>
-    
-    <title>Chromandr.io | v2.6 Stable</title>
+    <title>Chromandr.io | Lite Runner</title>
     <style>
-        body { margin: 0; background: #0a0a0a; color: #00ff41; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        #debug-panel { border: 2px solid #333; padding: 25px; background: #111; width: 85%; max-width: 500px; border-radius: 10px; text-align: center; }
-        .status { margin: 12px 0; font-size: 14px; border-bottom: 1px solid #222; padding-bottom: 5px; }
-        .ok { color: #00ff41; font-weight: bold; }
+        body { margin: 0; background: #0a0a0a; color: #00ff41; font-family: monospace; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        #debug-panel { border: 2px solid #333; padding: 25px; background: #111; width: 85%; max-width: 500px; border-radius: 10px; text-align: center; box-shadow: 0 0 15px rgba(0,255,0,0.1); }
+        .status { margin: 12px 0; font-size: 14px; }
+        .ok { color: #00ff41; }
         .err { color: #ff4444; }
-        .loading { color: #ffaa00; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0.5; } }
         #canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: none; background: #000; }
-        input[type="file"] { margin: 20px 0; color: #00ff41; border: 1px solid #00ff41; padding: 10px; width: 90%; cursor: pointer; }
-        button { background: #00ff41; color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; border-radius: 5px; }
+        input { margin: 20px 0; color: #00ff41; }
+        button { background: #333; color: white; border: 1px solid #555; padding: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div id="debug-panel">
         <h1 style="color:white; margin-top:0;">CHROMANDR.IO</h1>
-        
-        <div class="status" id="s1">Security Headers: <span>Checking...</span></div>
-        <div class="status" id="s2">VM Engine: <span>Checking...</span></div>
-        <div class="status" id="s3">System RAM: <span>Detecting...</span></div>
-        
+        <div class="status">Headers: <span id="s1">Checking...</span></div>
+        <div class="status">Engine: <span id="s2">Checking...</span></div>
+        <div class="status">RAM: <span id="s3">Detecting...</span></div>
+        <hr style="border:0; border-top:1px solid #333;">
         <div id="ui-area" style="display:none;">
-            <p style="color:#888;">Select a 32-bit (x86) Android ISO</p>
+            <p>Select your 32-bit ISO:</p>
             <input type="file" id="isoPicker" accept=".iso">
-            <div id="boot-status"></div>
+            <div id="boot-status" style="margin-top:10px; font-weight:bold;"></div>
         </div>
-
-        <button onclick="location.reload(true)" style="margin-top:10px; background:#333; color:white;">Hard Refresh</button>
+        <button onclick="location.reload(true)">Hard Refresh</button>
     </div>
 
     <canvas id="canvas"></canvas>
 
     <script type="module">
-        const s1 = document.getElementById('s1').querySelector('span');
-        const s2 = document.getElementById('s2').querySelector('span');
-        const s3 = document.getElementById('s3').querySelector('span');
+        const s1 = document.getElementById('s1');
+        const s2 = document.getElementById('s2');
+        const s3 = document.getElementById('s3');
         const uiArea = document.getElementById('ui-area');
         const picker = document.getElementById('isoPicker');
         const bootStatus = document.getElementById('boot-status');
 
-        // 1. Check Security Headers
-        if (window.crossOriginIsolated) {
-            s1.innerHTML = "[OK]";
-            s1.className = "ok";
-        } else {
-            s1.innerHTML = "[BLOCKED] - Press Hard Refresh";
-            s1.className = "err";
-        }
+        if (window.crossOriginIsolated) { s1.innerText = "[OK]"; s1.className = "ok"; } 
+        else { s1.innerText = "[BLOCKED]"; s1.className = "err"; }
 
-        // 2. Check Engine & RAM
         window.onload = () => {
             if (typeof CheerpX !== "undefined") {
-                s2.innerHTML = "[READY]";
-                s2.className = "ok";
+                s2.innerText = "[READY]"; s2.className = "ok";
                 uiArea.style.display = "block";
-            } else {
-                s2.innerHTML = "[FAILED]";
-                s2.className = "err";
-            }
-            
-            if (navigator.deviceMemory) {
-                s3.innerHTML = `[${navigator.deviceMemory}GB]`;
-                s3.className = navigator.deviceMemory < 8 ? "err" : "ok";
-            }
+            } else { s2.innerText = "[FAILED]"; s2.className = "err"; }
+            if (navigator.deviceMemory) s3.innerText = `[${navigator.deviceMemory}GB]`;
         };
 
         picker.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
-            bootStatus.innerHTML = "<span class='loading'>Reading ISO into Memory...</span>";
+            bootStatus.innerText = "Connecting to Virtual Disk...";
+            bootStatus.style.color = "#ffaa00";
             
             try {
-                // FIXED: Convert file to ArrayBuffer to prevent 'undefined' crash on 4GB RAM
-                const buffer = await file.arrayBuffer();
-                const isoDevice = await CheerpX.HttpBytesDevice.create(buffer);
+                // STREAMING METHOD: Best for 4GB Chromebooks
+                const blobUrl = URL.createObjectURL(file);
+                const isoDevice = await CheerpX.HttpBytesDevice.create(blobUrl);
 
-                bootStatus.innerHTML = "<span class='loading'>Booting Virtual Machine...</span>";
-                
                 const cx = await CheerpX.Linux.create({
                     mounts: [
                         { type: "ext2", path: "/", dev: isoDevice },
@@ -98,18 +77,19 @@
                 canvas.style.display = 'block';
                 cx.setKmsCanvas(canvas);
 
-                // Android x86 Compatibility Flags
+                bootStatus.innerText = "Booting...";
+
                 await cx.run("/kernel", [
                     "init=/init",
                     "androidboot.selinux=permissive",
                     "androidboot.hardware=android_x86",
                     "xforcevesa", 
-                    "nomodeset",
                     "SRC=/",
                     "quiet"
                 ]);
             } catch (err) {
-                bootStatus.innerHTML = `<span class='err'>ERROR: ${err.message || "Out of Memory"}</span>`;
+                bootStatus.innerText = "BOOT ERROR: Try a smaller ISO";
+                bootStatus.style.color = "#ff4444";
             }
         };
     </script>
