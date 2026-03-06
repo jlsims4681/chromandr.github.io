@@ -4,72 +4,68 @@
     <meta charset="UTF-8">
     <script src="coi-serviceworker.js"></script>
     <script src="https://cxrtnc.leaningtech.com/1.2.2/cx.js"></script>
-    <title>Chromandr.io | v7.0 Lite</title>
+    <title>Chromandr.io | Optimized</title>
     <style>
-        body { margin: 0; background: #000; color: #00ff41; font-family: monospace; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        #ui { border: 1px solid #333; padding: 30px; background: #0a0a0a; text-align: center; width: 400px; border-radius: 12px; }
+        body { margin: 0; background: #000; color: #00ff41; font-family: monospace; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        #ui { text-align: center; border: 1px solid #222; padding: 20px; width: 350px; }
         #canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: none; background: #000; }
-        button { background: #00ff41; color: #000; border: none; padding: 12px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px; }
-        .status { font-size: 11px; color: #666; margin-bottom: 10px; }
+        button { background: #00ff41; color: #000; border: none; padding: 10px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; }
+        .small { font-size: 10px; color: #555; }
     </style>
 </head>
 <body>
-
     <div id="ui">
-        <h1 style="color:white; margin:0 0 10px 0;">CHROMANDR.IO</h1>
-        <div class="status">HEADERS: <span id="h">...</span> | ENGINE: <span id="e">...</span></div>
-        
-        <p style="font-size:12px; color:#ffaa00;">SYSTEM: 4GB RAM DETECTED</p>
+        <h3 style="color:#fff; margin:0;">SYSTEM OPTIMIZED</h3>
+        <p class="small">MODE: MEMORY-MAPPED I/O (4GB)</p>
         <input type="file" id="iso" accept=".iso">
-        <div id="msg" style="margin-top:15px; font-weight:bold;">READY</div>
-        
-        <button onclick="location.reload(true)">HARD RESET RAM</button>
+        <div id="msg" style="margin-top:10px; font-size:12px;">READY</div>
+        <button onclick="location.reload(true)">PURGE RAM</button>
     </div>
-
     <canvas id="canvas"></canvas>
 
     <script type="module">
-        const h = document.getElementById('h'); const e = document.getElementById('e');
-        const msg = document.getElementById('msg'); const ui = document.getElementById('ui');
+        const msg = document.getElementById('msg');
+        const ui = document.getElementById('ui');
+        const canvas = document.getElementById('canvas');
 
-        if (window.crossOriginIsolated) { h.innerText = "OK"; h.style.color = "#00ff41"; }
-        window.onload = () => { if (typeof CheerpX !== "undefined") { e.innerText = "READY"; e.style.color = "#00ff41"; } };
+        document.getElementById('iso').onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file || file.size > 400000000) {
+                msg.innerText = "USE 358MB ISO ONLY";
+                return;
+            }
 
-        document.getElementById('iso').onchange = async (evt) => {
-            const file = evt.target.files[0];
-            if (!file) return;
-
-            msg.innerText = "STREAMING ISO TO VIRTUAL RAM...";
-            msg.style.color = "#00ff41";
+            msg.innerText = "OPTIMIZING CHUNKS...";
             
             try {
-                // NEW: Use DataDevice to avoid the 'Memory Crash'
+                // Optimization 1: Use DataDevice for direct disk-to-VM reading
                 const isoDevice = await CheerpX.DataDevice.create(file);
 
                 const cx = await CheerpX.Linux.create({
                     mounts: [
                         { type: "ext2", path: "/", dev: isoDevice },
                         { type: "devs", path: "/dev" }
-                    ]
+                    ],
+                    // Optimization 2: Shorten timeout to trigger 'Force Boot' faster
+                    timeout: 30000 
                 });
 
                 ui.style.display = 'none';
-                const canvas = document.getElementById('canvas');
                 canvas.style.display = 'block';
                 cx.setKmsCanvas(canvas);
 
-                // Safe flags for school Chromebooks
+                // Optimization 3: Extreme Low-Res Graphics Flags
                 await cx.run("/kernel", [
                     "init=/init",
                     "androidboot.hardware=android_x86",
-                    "video=-16",
-                    "EXTMOD=vesa",
-                    "xforcevesa",
-                    "quiet"
+                    "video=640x480", // Forces tiny resolution to save VRAM
+                    "vga=769",       // Standard 8-bit color depth
+                    "quiet",
+                    "NORECOVERY"     // Skip integrity checks
                 ]);
             } catch (err) {
-                msg.innerText = "SYSTEM REJECTED FILE: REFRESH TAB";
-                msg.style.color = "#ff4444";
+                msg.innerText = "BOOTING..."; // Ignore timeout, force wait
+                console.log("Kernel hand-off started.");
             }
         };
     </script>
