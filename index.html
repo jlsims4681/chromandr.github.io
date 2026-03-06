@@ -39,8 +39,7 @@
         bootBtn.onclick = async () => {
             msg.innerText = "CONNECTING TO CLOUD ISO...";
             try {
-                // This points to a pre-optimized cloud ISO so your RAM stays free
-                const isoDevice = await CheerpX.HttpBytesDevice.create("https://worker-proxy.io/android-lite.iso");
+                const isoDevice = await CheerpX.HttpBytesDevice.create("https://bro.biriyomz.com/scramjet/https%3A%2F%2Farchive.org%2Fdownload%2Fandroid-x86-some-releases%2Fandroid-x86-5.1-rc1.iso");
 
                 const cx = await CheerpX.Linux.create({
                     mounts: [
