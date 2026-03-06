@@ -3,67 +3,69 @@
 <head>
     <script src="coi-serviceworker.js"></script>
     <script src="https://cxrtnc.leaningtech.com/1.2.2/cx.js"></script>
-    <title>Chromandr.io | Android Runner</title>
+    <title>Chromandr.io | Debug Mode</title>
     <style>
-        body { margin: 0; background: #000; color: #0f0; font-family: monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        #display { width: 100%; height: 100%; display: none; }
-        #ui { text-align: center; border: 1px solid #333; padding: 30px; border-radius: 10px; background: #111; }
-        .btn { background: #0f0; color: #000; padding: 10px 20px; border: none; cursor: pointer; font-weight: bold; margin: 10px; }
-        #status { color: #888; margin-top: 10px; }
+        body { margin: 0; background: #000; color: #0f0; font-family: monospace; padding: 20px; }
+        #status-box { border: 2px solid #333; padding: 20px; background: #111; max-width: 600px; margin: auto; }
+        .error-text { color: #ff4444; font-weight: bold; }
+        .success-text { color: #44ff44; }
+        #canvas { width: 100vw; height: 100vh; display: none; position: absolute; top: 0; left: 0; }
+        input { margin-top: 20px; color: white; }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <h1>CHROMANDR.IO</h1>
-        <p>Select your 32-bit Android ISO</p>
-        <input type="file" id="isoPicker" accept=".iso">
-        <br>
-        <button class="btn" onclick="location.reload(true)">FORCE REFRESH</button>
-        <div id="status">Ready.</div>
+    <div id="status-box">
+        <h1>System Diagnostics</h1>
+        <div id="check1">Checking Security Headers... </div>
+        <div id="check2">Checking CheerpX Engine... </div>
+        <hr>
+        <div id="main-status">Waiting for system check...</div>
+        <input type="file" id="isoPicker" accept=".iso" style="display:none;">
     </div>
 
-    <canvas id="display"></canvas>
+    <canvas id="canvas"></canvas>
 
-    <script type="module">
-        const isoPicker = document.getElementById('isoPicker');
-        const status = document.getElementById('status');
-        const canvas = document.getElementById('display');
+    <script>
+        const s1 = document.getElementById('check1');
+        const s2 = document.getElementById('check2');
+        const main = document.getElementById('main-status');
+        const picker = document.getElementById('isoPicker');
 
-        isoPicker.onchange = async (e) => {
+        // 1. Check if the Security Hack worked
+        if (window.crossOriginIsolated) {
+            s1.innerHTML += "<span class='success-text'>[OK]</span>";
+        } else {
+            s1.innerHTML += "<span class='error-text'>[BLOCKED] - Press Ctrl+Shift+R</span>";
+        }
+
+        // 2. Check if CheerpX loaded
+        window.onload = () => {
+            if (typeof CheerpX !== "undefined") {
+                s2.innerHTML += "<span class='success-text'>[LOADED]</span>";
+                main.innerText = "Ready! Please select your 32-bit ISO.";
+                picker.style.display = "block";
+            } else {
+                s2.innerHTML += "<span class='error-text'>[FAILED]</span>";
+                main.innerText = "The engine is missing. Check your internet or GitHub files.";
+            }
+        };
+
+        picker.onchange = async (e) => {
             const file = e.target.files[0];
-            if (!file) return;
-
-            status.innerText = "Initializing Engine...";
-            
             try {
-                // Initialize CheerpX
+                main.innerText = "Booting " + file.name + "...";
                 const isoDevice = await CheerpX.HttpBytesDevice.create(URL.createObjectURL(file));
                 const cx = await CheerpX.Linux.create({
-                    mounts: [
-                        { type: "ext2", path: "/", dev: isoDevice },
-                        { type: "devs", path: "/dev" }
-                    ]
+                    mounts: [{ type: "ext2", path: "/", dev: isoDevice }, { type: "devs", path: "/dev" }]
                 });
-
-                document.getElementById('ui').style.display = 'none';
+                document.getElementById('status-box').style.display = 'none';
+                const canvas = document.getElementById('canvas');
                 canvas.style.display = 'block';
                 cx.setKmsCanvas(canvas);
-
-                status.innerText = "Booting Android...";
-                // Critical Android x86 Boot Flags
-                await cx.run("/kernel", [
-                    "init=/init",
-                    "androidboot.selinux=permissive",
-                    "androidboot.hardware=android_x86",
-                    "xforcevesa",
-                    "quiet",
-                    "SRC=/"
-                ]);
-
+                await cx.run("/kernel", ["init=/init", "xforcevesa", "quiet", "SRC=/"]);
             } catch (err) {
-                status.innerText = "Error: " + err.message;
-                console.error(err);
+                main.innerHTML = "<span class='error-text'>BOOT ERROR: " + err.message + "</span>";
             }
         };
     </script>
