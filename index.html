@@ -4,77 +4,79 @@
     <meta charset="UTF-8">
     <script src="coi-serviceworker.js"></script>
     <script src="https://cxrtnc.leaningtech.com/1.2.2/cx.js"></script>
-    <title>Chromandr.io | Cloud Edition</title>
+    <title>Chromandr.io | v6.0 Fixed</title>
     <style>
         body { margin: 0; background: #000; color: #00ff41; font-family: monospace; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        #ui { border: 1px solid #333; padding: 30px; background: #0a0a0a; text-align: center; width: 350px; }
+        #ui { border: 1px solid #333; padding: 30px; background: #0a0a0a; text-align: center; width: 380px; border-radius: 8px; }
         #canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: none; background: #000; }
-        button { background: #00ff41; color: #000; border: none; padding: 15px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
-        .stat { font-size: 10px; color: #666; margin-bottom: 10px; }
+        button { background: #00ff41; color: #000; border: none; padding: 12px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px; }
+        .stat { font-size: 10px; color: #666; margin-bottom: 15px; }
     </style>
 </head>
 <body>
+
     <div id="ui">
-        <h2 style="color:white; margin-top:0;">CHROMANDR.IO</h2>
+        <h2 style="color:white; margin:0;">CHROMANDR.IO</h2>
         <div class="stat">HEADERS: <span id="h">...</span> | ENGINE: <span id="e">...</span></div>
-        <p style="font-size: 12px;">CLOUD STREAMING ENABLED</p>
-        <button id="bootBtn" style="display:none;">BOOT ANDROID (5.1)</button>
-        <div id="msg" style="margin-top:10px; font-weight:bold;">INITIALIZING...</div>
+        
+        <p style="font-size:12px;">SELECT THE 358MB ISO</p>
+        <input type="file" id="iso" accept=".iso">
+        <div id="msg" style="margin-top:15px; font-weight:bold; color:#ffaa00;">READY</div>
+        
+        <button onclick="location.reload(true)">FORCE RAM PURGE</button>
     </div>
+
     <canvas id="canvas"></canvas>
 
     <script type="module">
         const h = document.getElementById('h'); const e = document.getElementById('e');
-        const msg = document.getElementById('msg'); const bootBtn = document.getElementById('bootBtn');
+        const msg = document.getElementById('msg'); const ui = document.getElementById('ui');
 
         if (window.crossOriginIsolated) { h.innerText = "OK"; h.style.color = "#00ff41"; }
-        window.onload = () => {
-            if (typeof CheerpX !== "undefined") { 
-                e.innerText = "READY"; e.style.color = "#00ff41";
-                bootBtn.style.display = "block";
-                msg.innerText = "READY TO STREAM";
-            }
-        };
+        window.onload = () => { if (typeof CheerpX !== "undefined") { e.innerText = "READY"; e.style.color = "#00ff41"; } };
 
-    bootBtn.onclick = async () => {
-            msg.innerText = "WAKING UP CLOUD SERVER...";
-            msg.style.color = "#ffaa00";
+        document.getElementById('iso').onchange = async (evt) => {
+            const file = evt.target.files[0];
+            if (!file) return;
+
+            // Security check against the 921MB file that caused 'undefined' errors
+            if (file.size > 500000000) {
+                msg.innerText = "CRITICAL: FILE TOO LARGE (USE 358MB)";
+                msg.style.color = "#ff4444";
+                return;
+            }
+
+            msg.innerText = "MAPPING VIRTUAL DRIVE...";
             
             try {
-                // Step 1: Force a small 'ping' to the ISO to ensure the connection is live
-                const testFetch = await fetch("https://cdn.delivery.leaningtech.com/android-x86-5.1.iso", { method: 'HEAD' });
-                if (!testFetch.ok) throw new Error("Cloud Server Busy");
-
-                msg.innerText = "STREAMING ANDROID (LOADING KERNEL)...";
-
-                const isoDevice = await CheerpX.HttpBytesDevice.create("https://cdn.delivery.leaningtech.com/android-x86-5.1.iso");
+                // HttpBytesDevice used locally to stream chunks from the file picker
+                const blobUrl = URL.createObjectURL(file);
+                const isoDevice = await CheerpX.HttpBytesDevice.create(blobUrl);
 
                 const cx = await CheerpX.Linux.create({
                     mounts: [
                         { type: "ext2", path: "/", dev: isoDevice },
                         { type: "devs", path: "/dev" }
                     ],
-                    // Use a slightly shorter timeout so it fails fast and we can retry
-                    timeout: 60000 
+                    timeout: 120000 // Increased to 2 mins for 4GB stability
                 });
 
-                document.getElementById('ui').style.display = 'none';
+                ui.style.display = 'none';
                 const canvas = document.getElementById('canvas');
                 canvas.style.display = 'block';
                 cx.setKmsCanvas(canvas);
 
-                // Added 'nomodeset' to help the 4GB RAM graphics initialize faster
                 await cx.run("/kernel", [
-                    "init=/init", 
-                    "androidboot.hardware=android_x86", 
-                    "vga=788", 
-                    "nomodeset",
-                    "xforcevesa", 
+                    "init=/init",
+                    "androidboot.hardware=android_x86",
+                    "video=-16",      // Low-RAM graphics mode
+                    "EXTMOD=vesa",    // Generic driver
+                    "xforcevesa",
                     "quiet"
                 ]);
             } catch (err) {
-                msg.innerText = "NETWORK BUSY: RETRYING IN 5s...";
-                setTimeout(() => { bootBtn.click(); }, 5000);
+                msg.innerText = "MEMORY CRASH: REFRESH SYSTEM";
+                msg.style.color = "#ff4444";
             }
         };
     </script>
