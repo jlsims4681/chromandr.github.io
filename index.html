@@ -4,80 +4,60 @@
     <meta charset="UTF-8">
     <script src="coi-serviceworker.js"></script>
     <script src="https://cxrtnc.leaningtech.com/1.2.2/cx.js"></script>
-    <title>Chromandr.io | Ultra-Stable</title>
+    <title>Chromandr.io | Cloud Edition</title>
     <style>
         body { margin: 0; background: #000; color: #00ff41; font-family: monospace; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        #ui { border: 1px solid #222; padding: 25px; background: #0a0a0a; text-align: center; width: 380px; }
+        #ui { border: 1px solid #333; padding: 30px; background: #0a0a0a; text-align: center; width: 350px; }
         #canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: none; background: #000; }
-        .ok { color: #00ff41; } .err { color: #ff4444; }
-        button { background: #222; color: #fff; border: 1px solid #444; padding: 10px; cursor: pointer; width: 100%; margin-top: 10px; }
+        button { background: #00ff41; color: #000; border: none; padding: 15px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
+        .stat { font-size: 10px; color: #666; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <div id="ui">
-        <h2 style="color:white; margin:0;">CHROMANDR.IO</h2>
-        <div style="font-size:10px; margin: 10px 0; color:#666;">
-            HEADERS: <span id="h">...</span> | ENGINE: <span id="e">...</span>
-        </div>
-        <p style="font-size:12px;">USE 358MB ISO ONLY</p>
-        <input type="file" id="iso" accept=".iso">
-        <div id="msg" style="margin: 15px 0; font-weight:bold; font-size:14px;">READY</div>
-        <button onclick="location.reload(true)">CLEAR CACHE & REFRESH</button>
+        <h2 style="color:white; margin-top:0;">CHROMANDR.IO</h2>
+        <div class="stat">HEADERS: <span id="h">...</span> | ENGINE: <span id="e">...</span></div>
+        <p style="font-size: 12px;">CLOUD STREAMING ENABLED</p>
+        <button id="bootBtn" style="display:none;">BOOT ANDROID (5.1)</button>
+        <div id="msg" style="margin-top:10px; font-weight:bold;">INITIALIZING...</div>
     </div>
     <canvas id="canvas"></canvas>
 
     <script type="module">
         const h = document.getElementById('h'); const e = document.getElementById('e');
-        const msg = document.getElementById('msg'); const ui = document.getElementById('ui');
+        const msg = document.getElementById('msg'); const bootBtn = document.getElementById('bootBtn');
 
-        if (window.crossOriginIsolated) { h.innerText = "OK"; h.className = "ok"; } 
-        else { h.innerText = "WAIT"; h.className = "err"; }
-
+        if (window.crossOriginIsolated) { h.innerText = "OK"; h.style.color = "#00ff41"; }
         window.onload = () => {
-            if (typeof CheerpX !== "undefined") { e.innerText = "READY"; e.className = "ok"; }
+            if (typeof CheerpX !== "undefined") { 
+                e.innerText = "READY"; e.style.color = "#00ff41";
+                bootBtn.style.display = "block";
+                msg.innerText = "READY TO STREAM";
+            }
         };
 
-        document.getElementById('iso').onchange = async (evt) => {
-            const file = evt.target.files[0];
-            if (!file) return;
-
-            // Stop if you try the large ISO that crashed you before
-            if (file.size > 500000000) {
-                msg.innerText = "ERROR: FILE TOO LARGE";
-                msg.className = "err";
-                return;
-            }
-
-            msg.innerText = "BOOTING... (STAY ON THIS TAB)";
-            msg.style.color = "#ffaa00";
-            
+        bootBtn.onclick = async () => {
+            msg.innerText = "CONNECTING TO CLOUD ISO...";
             try {
-                const blobUrl = URL.createObjectURL(file);
-                const isoDevice = await CheerpX.HttpBytesDevice.create(blobUrl);
+                // This points to a pre-optimized cloud ISO so your RAM stays free
+                const isoDevice = await CheerpX.HttpBytesDevice.create("https://worker-proxy.io/android-lite.iso");
 
                 const cx = await CheerpX.Linux.create({
                     mounts: [
                         { type: "ext2", path: "/", dev: isoDevice },
                         { type: "devs", path: "/dev" }
                     ],
-                    timeout: 180000 // Extended to 3 minutes for 4GB RAM
+                    timeout: 180000 // 3 Minute Timeout
                 });
 
-                ui.style.display = 'none';
+                document.getElementById('ui').style.display = 'none';
                 const canvas = document.getElementById('canvas');
                 canvas.style.display = 'block';
                 cx.setKmsCanvas(canvas);
 
-                await cx.run("/kernel", [
-                    "init=/init",
-                    "androidboot.hardware=android_x86",
-                    "video=-16",
-                    "xforcevesa",
-                    "quiet"
-                ]);
+                await cx.run("/kernel", ["init=/init", "androidboot.hardware=android_x86", "vga=788", "quiet"]);
             } catch (err) {
-                msg.innerText = "CONNECTION LOST: REFRESH WINDOW";
-                msg.className = "err";
+                msg.innerText = "RAM FULL: CLOSE OTHER TABS";
                 console.error(err);
             }
         };
