@@ -4,68 +4,52 @@
     <meta charset="UTF-8">
     <script src="coi-serviceworker.js"></script>
     <script src="https://cxrtnc.leaningtech.com/1.2.2/cx.js"></script>
-    <title>Chromandr.io | Optimized</title>
+    <title>Chromandr.io | Terminal Mode</title>
     <style>
-        body { margin: 0; background: #000; color: #00ff41; font-family: monospace; display: flex; align-items: center; justify-content: center; height: 100vh; }
-        #ui { text-align: center; border: 1px solid #222; padding: 20px; width: 350px; }
-        #canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: none; background: #000; }
-        button { background: #00ff41; color: #000; border: none; padding: 10px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; }
-        .small { font-size: 10px; color: #555; }
+        body { margin: 0; background: #000; color: #00ff41; font-family: monospace; }
+        #console { width: 100vw; height: 100vh; overflow: hidden; display: none; }
+        #ui { padding: 40px; text-align: center; }
+        button { background: #00ff41; color: #000; border: none; padding: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div id="ui">
-        <h3 style="color:#fff; margin:0;">SYSTEM OPTIMIZED</h3>
-        <p class="small">MODE: MEMORY-MAPPED I/O (4GB)</p>
-        <input type="file" id="iso" accept=".iso">
-        <div id="msg" style="margin-top:10px; font-size:12px;">READY</div>
-        <button onclick="location.reload(true)">PURGE RAM</button>
+        <h2>TERMINAL RESCUE MODE</h2>
+        <p>This skips graphics to save RAM. Select your 358MB ISO:</p>
+        <input type="file" id="iso">
+        <div id="msg">READY</div>
     </div>
-    <canvas id="canvas"></canvas>
+    <div id="console"></div>
 
     <script type="module">
         const msg = document.getElementById('msg');
         const ui = document.getElementById('ui');
-        const canvas = document.getElementById('canvas');
+        const consoleDiv = document.getElementById('console');
 
         document.getElementById('iso').onchange = async (e) => {
             const file = e.target.files[0];
-            if (!file || file.size > 400000000) {
-                msg.innerText = "USE 358MB ISO ONLY";
-                return;
-            }
+            if (!file) return;
 
-            msg.innerText = "OPTIMIZING CHUNKS...";
-            
+            msg.innerText = "BOOTING KERNEL...";
             try {
-                // Optimization 1: Use DataDevice for direct disk-to-VM reading
                 const isoDevice = await CheerpX.DataDevice.create(file);
-
                 const cx = await CheerpX.Linux.create({
-                    mounts: [
-                        { type: "ext2", path: "/", dev: isoDevice },
-                        { type: "devs", path: "/dev" }
-                    ],
-                    // Optimization 2: Shorten timeout to trigger 'Force Boot' faster
-                    timeout: 30000 
+                    mounts: [{ type: "ext2", path: "/", dev: isoDevice }, { type: "devs", path: "/dev" }]
                 });
 
                 ui.style.display = 'none';
-                canvas.style.display = 'block';
-                cx.setKmsCanvas(canvas);
+                consoleDiv.style.display = 'block';
+                
+                // Use a text terminal instead of a graphics canvas
+                cx.setTerminal(consoleDiv);
 
-                // Optimization 3: Extreme Low-Res Graphics Flags
                 await cx.run("/kernel", [
-                    "init=/init",
+                    "init=/bin/sh", // Boot directly into a command shell
                     "androidboot.hardware=android_x86",
-                    "video=640x480", // Forces tiny resolution to save VRAM
-                    "vga=769",       // Standard 8-bit color depth
-                    "quiet",
-                    "NORECOVERY"     // Skip integrity checks
+                    "quiet"
                 ]);
             } catch (err) {
-                msg.innerText = "BOOTING..."; // Ignore timeout, force wait
-                console.log("Kernel hand-off started.");
+                msg.innerText = "RAM EXHAUSTED";
             }
         };
     </script>
