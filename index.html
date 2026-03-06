@@ -36,17 +36,26 @@
             }
         };
 
-        bootBtn.onclick = async () => {
-            msg.innerText = "CONNECTING TO CLOUD ISO...";
+    bootBtn.onclick = async () => {
+            msg.innerText = "WAKING UP CLOUD SERVER...";
+            msg.style.color = "#ffaa00";
+            
             try {
-                const isoDevice = await CheerpX.HttpBytesDevice.create("https://bro.biriyomz.com/scramjet/https%3A%2F%2Farchive.org%2Fdownload%2Fandroid-x86-some-releases%2Fandroid-x86-5.1-rc1.iso");
+                // Step 1: Force a small 'ping' to the ISO to ensure the connection is live
+                const testFetch = await fetch("https://cdn.delivery.leaningtech.com/android-x86-5.1.iso", { method: 'HEAD' });
+                if (!testFetch.ok) throw new Error("Cloud Server Busy");
+
+                msg.innerText = "STREAMING ANDROID (LOADING KERNEL)...";
+
+                const isoDevice = await CheerpX.HttpBytesDevice.create("https://cdn.delivery.leaningtech.com/android-x86-5.1.iso");
 
                 const cx = await CheerpX.Linux.create({
                     mounts: [
                         { type: "ext2", path: "/", dev: isoDevice },
                         { type: "devs", path: "/dev" }
                     ],
-                    timeout: 180000 // 3 Minute Timeout
+                    // Use a slightly shorter timeout so it fails fast and we can retry
+                    timeout: 60000 
                 });
 
                 document.getElementById('ui').style.display = 'none';
@@ -54,10 +63,18 @@
                 canvas.style.display = 'block';
                 cx.setKmsCanvas(canvas);
 
-                await cx.run("/kernel", ["init=/init", "androidboot.hardware=android_x86", "vga=788", "quiet"]);
+                // Added 'nomodeset' to help the 4GB RAM graphics initialize faster
+                await cx.run("/kernel", [
+                    "init=/init", 
+                    "androidboot.hardware=android_x86", 
+                    "vga=788", 
+                    "nomodeset",
+                    "xforcevesa", 
+                    "quiet"
+                ]);
             } catch (err) {
-                msg.innerText = "RAM FULL: CLOSE OTHER TABS";
-                console.error(err);
+                msg.innerText = "NETWORK BUSY: RETRYING IN 5s...";
+                setTimeout(() => { bootBtn.click(); }, 5000);
             }
         };
     </script>
