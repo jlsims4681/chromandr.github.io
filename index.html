@@ -1,69 +1,26 @@
+/*lowkey using a iframe to my google apps script because this is pissing me off*/
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Android Master Console</title>
-  <link rel="stylesheet" href="https://copy.sh/v86/v86.css">
+    <meta charset="UTF-8">
+    <title>v86 - x86 Emulator</title>
+    <link rel="stylesheet" href="https://copy.sh/v86/v86.css">
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #eee; }
+        /*iframe fill yay*/
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
 </head>
-<body style="background-color: #eee;">
+<body>
 
-  <div id="setup">
-    <h3>Android Master Console - Setup</h3>
-    <table>
-      <tr>
-        <td width="300">ISO Image (Android)</td>
-        <td><input type="file" id="cd_image"></td>
-      </tr>
-      <tr>
-        <td>Memory size (RAM)</td>
-        <td><input type="text" id="memory_size" value="400"> MB</td>
-      </tr>
-      <tr>
-        <td>Video Memory (VRAM)</td>
-        <td><input type="text" id="vga_memory_size" value="36"> MB</td>
-      </tr>
-    </table>
-    <br>
-    <button id="start_emulation" style="font-size: 1.2em;">Start Emulation</button>
-  </div>
+    <iframe 
+        src="https://script.google.com/macros/s/AKfycbwWVY5dEEbcVCWQyO35090vn3BdxJd3xdIeBJHcKlMaatTFmh3Lex2ljiwPrrvUkZY/exec" 
+        allow="autoplay; keyboard-map; sync-xhr; fullscreen;"
+    ></iframe>
 
-  <div id="screen_container" style="display: none;">
-    <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
-    <canvas></canvas>
-  </div>
-
-  <script src="https://copy.sh/v86/build/libv86.js"></script>
-  
-  <script>
-    "use strict";
-
-    document.getElementById("start_emulation").onclick = function() {
-      var cd_file = document.getElementById("cd_image").files[0];
-      
-      if (!cd_file) {
-        alert("Please select your ISO file first.");
-        return;
-      }
-
-      var mem = parseInt(document.getElementById("memory_size").value, 10);
-      var vram = parseInt(document.getElementById("vga_memory_size").value, 10);
-
-      // Transition from setup to emulator
-      document.getElementById("setup").style.display = "none";
-      document.getElementById("screen_container").style.display = "block";
-
-      // Initialize with your exact settings
-      var emulator = new V86Starter({
-        wasm_path: "https://copy.sh/v86/build/v86.wasm",
-        bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
-        vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
-        screen_container: document.getElementById("screen_container"),
-        memory_size: mem * 1024 * 1024,
-        vga_memory_size: vram * 1024 * 1024,
-        cdrom: { file: cd_file },
-        autostart: true,
-      });
-    };
-  </script>
 </body>
 </html>
