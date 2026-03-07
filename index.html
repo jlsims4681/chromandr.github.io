@@ -1,76 +1,25 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>ISO Runner | x86 Manual</title>
     <script src="https://copy.sh/v86/build/libv86.js"></script>
-    <style>
-        body { margin: 0; background: #000; color: #00ff41; font-family: monospace; text-align: center; }
-        #ui { padding: 20px; background: #111; border-bottom: 2px solid #333; }
-        #screen_container { margin-top: 20px; display: flex; justify-content: center; }
-        canvas { border: 1px solid #444; background: #000; cursor: crosshair; }
-        .btn { background: #00ff41; color: #000; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; border-radius: 4px; }
-        .status { margin-top: 10px; font-size: 12px; color: #888; }
-    </style>
 </head>
-<body>
-
-    <div id="ui">
-        <h2 style="color:white; margin-bottom:5px;">x86 ISO RUNNER</h2>
-        <div id="msg">SYSTEM IDLE</div>
-        
-        <button id="start_engine" class="btn">1. START ENGINE</button>
-
-        <div id="step2" style="display:none; margin-top:10px;">
-            <p>ENGINE READY. INSERT ISO:</p>
-            <input type="file" id="iso_input" accept=".iso">
-        </div>
-    </div>
+<body style="background:#000;">
 
     <div id="screen_container">
         <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
-        <canvas id="v86_canvas"></canvas>
+        <canvas></canvas>
     </div>
 
     <script>
-        let emulator;
-        const msg = document.getElementById("msg");
-
-        document.getElementById("start_engine").onclick = function() {
-            this.style.display = "none";
-            msg.innerText = "LOADING VIRTUAL HARDWARE...";
-
-            // Initialize the x86 hardware without a disk
-            emulator = new V86Starter({
+        window.onload = function() {
+            var emulator = new V86Starter({
                 wasm_path: "https://copy.sh/v86/build/v86.wasm",
-                memory_size: 1024 * 1024 * 1024, // 1GB RAM for the guest
-                vga_memory_size: 32 * 1024 * 1024,
+                memory_size: 512 * 1024 * 1024,
+                vga_memory_size: 8 * 1024 * 1024,
                 screen_container: document.getElementById("screen_container"),
-                canvas: document.getElementById("v86_canvas"),
                 bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
                 vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
                 autostart: true,
-            });
-
-            // Once SeaBIOS loads, we allow the file input
-            setTimeout(() => {
-                msg.innerText = "HARDWARE READY";
-                document.getElementById("step2").style.display = "block";
-            }, 1500);
-        };
-
-        document.getElementById("iso_input").onchange = function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            msg.innerText = "DISC INSERTED. BOOTING...";
-            
-            // This 'hot-swaps' the file into the virtual CD drive
-            emulator.create_file_source(file, function(source) {
-                emulator.set_cdrom(source);
-                
-                // Force a hardware reset to recognize the new disc
-                emulator.restart(); 
             });
         };
     </script>
