@@ -1,77 +1,69 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Android Master Console | Manual Mode</title>
-    <script src="https://copy.sh/v86/build/libv86.js"></script>
-    <style>
-        body { background: #0d1117; color: #c9d1d9; font-family: sans-serif; margin: 0; padding: 20px; text-align: center; }
-        #screen_container { 
-            background: #000; 
-            border: 2px solid #30363d; 
-            margin: 20px auto; 
-            display: inline-block;
-            min-width: 640px;
-            min-height: 400px;
-        }
-        .setup-box { background: #161b22; padding: 20px; border: 1px solid #30363d; border-radius: 6px; display: inline-block; }
-        .btn-start { background: #238636; color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 6px; }
-        canvas { display: block; margin: 0 auto; }
-    </style>
+  <meta charset="utf-8">
+  <title>Android Master Console</title>
+  <link rel="stylesheet" href="https://copy.sh/v86/v86.css">
 </head>
-<body>
+<body style="background-color: #eee;">
 
-    <h1>ANDROID MASTER CONSOLE</h1>
+  <div id="setup">
+    <h3>Android Master Console - Setup</h3>
+    <table>
+      <tr>
+        <td width="300">ISO Image (Android)</td>
+        <td><input type="file" id="cd_image"></td>
+      </tr>
+      <tr>
+        <td>Memory size (RAM)</td>
+        <td><input type="text" id="memory_size" value="400"> MB</td>
+      </tr>
+      <tr>
+        <td>Video Memory (VRAM)</td>
+        <td><input type="text" id="vga_memory_size" value="36"> MB</td>
+      </tr>
+    </table>
+    <br>
+    <button id="start_emulation" style="font-size: 1.2em;">Start Emulation</button>
+  </div>
 
-    <div class="setup-box">
-        <h3>STEP 1: INSERT ISO</h3>
-        <input type="file" id="cd_file">
-        <p style="font-size: 12px; color: #8b949e;">Manual override: Input your RAM/VRAM settings below</p>
-        
-        <div style="margin: 10px 0;">
-            RAM: <input type="number" id="ram_val" value="400" style="width: 60px;"> MB | 
-            VRAM: <input type="number" id="vram_val" value="36" style="width: 50px;"> MB
-        </div>
+  <div id="screen_container" style="display: none;">
+    <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
+    <canvas></canvas>
+  </div>
 
-        <button id="boot_btn" class="btn-start">START EMULATION</button>
-    </div>
+  <script src="https://copy.sh/v86/build/libv86.js"></script>
+  
+  <script>
+    "use strict";
 
-    <div id="screen_container">
-        <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
-        <canvas id="v86_canvas"></canvas>
-    </div>
+    document.getElementById("start_emulation").onclick = function() {
+      var cd_file = document.getElementById("cd_image").files[0];
+      
+      if (!cd_file) {
+        alert("Please select your ISO file first.");
+        return;
+      }
 
-    <script>
-        document.getElementById("boot_btn").onclick = function() {
-            const fileInput = document.getElementById("cd_file");
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                alert("Please select your Android ISO first!");
-                return;
-            }
+      var mem = parseInt(document.getElementById("memory_size").value, 10);
+      var vram = parseInt(document.getElementById("vga_memory_size").value, 10);
 
-            // Grab your manual settings from the boxes
-            const userRam = document.getElementById("ram_val").value;
-            const userVram = document.getElementById("vram_val").value;
+      // Transition from setup to emulator
+      document.getElementById("setup").style.display = "none";
+      document.getElementById("screen_container").style.display = "block";
 
-            const emulator = new V86Starter({
-                wasm_path: "https://copy.sh/v86/build/v86.wasm",
-                memory_size: parseInt(userRam) * 1024 * 1024,
-                vga_memory_size: parseInt(userVram) * 1024 * 1024,
-                screen_container: document.getElementById("screen_container"),
-                canvas: document.getElementById("v86_canvas"),
-                bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
-                vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
-                cdrom: { file: file },
-                autostart: true,
-            });
-
-            // Hide the setup box once running to save screen space
-            document.querySelector(".setup-box").style.opacity = "0.5";
-            this.innerText = "SYSTEM RUNNING";
-            this.disabled = true;
-        };
-    </script>
+      // Initialize with your exact settings
+      var emulator = new V86Starter({
+        wasm_path: "https://copy.sh/v86/build/v86.wasm",
+        bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
+        vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
+        screen_container: document.getElementById("screen_container"),
+        memory_size: mem * 1024 * 1024,
+        vga_memory_size: vram * 1024 * 1024,
+        cdrom: { file: cd_file },
+        autostart: true,
+      });
+    };
+  </script>
 </body>
 </html>
