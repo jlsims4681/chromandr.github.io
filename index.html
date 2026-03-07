@@ -2,63 +2,75 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Android Master Console | GitHub</title>
+    <title>Android Master Console | Manual Mode</title>
     <script src="https://copy.sh/v86/build/libv86.js"></script>
     <style>
-        body { background: #0d1117; color: #58a6ff; font-family: 'Segoe UI', monospace; text-align: center; margin: 0; }
-        #header { padding: 20px; border-bottom: 1px solid #30363d; background: #161b22; }
-        #container { margin: 20px auto; max-width: 1024px; }
-        #screen_container { background: #000; border: 2px solid #30363d; border-radius: 6px; display: inline-block; }
-        canvas { display: block; }
-        .controls { margin-top: 15px; background: #161b22; padding: 20px; border-radius: 6px; border: 1px solid #30363d; }
-        .status-light { height: 10px; width: 10px; background: #238636; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        input[type="file"] { color: #8b949e; }
+        body { background: #0d1117; color: #c9d1d9; font-family: sans-serif; margin: 0; padding: 20px; text-align: center; }
+        #screen_container { 
+            background: #000; 
+            border: 2px solid #30363d; 
+            margin: 20px auto; 
+            display: inline-block;
+            min-width: 640px;
+            min-height: 400px;
+        }
+        .setup-box { background: #161b22; padding: 20px; border: 1px solid #30363d; border-radius: 6px; display: inline-block; }
+        .btn-start { background: #238636; color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; border-radius: 6px; }
+        canvas { display: block; margin: 0 auto; }
     </style>
 </head>
 <body>
 
-    <div id="header">
-        <h1 style="margin:0; font-size: 24px;">ANDROID MASTER CONSOLE</h1>
-        <div style="font-size: 12px; margin-top: 5px;">
-            <span class="status-light"></span> x86 ENGINE READY (400MB RAM)
+    <h1>ANDROID MASTER CONSOLE</h1>
+
+    <div class="setup-box">
+        <h3>STEP 1: INSERT ISO</h3>
+        <input type="file" id="cd_file">
+        <p style="font-size: 12px; color: #8b949e;">Manual override: Input your RAM/VRAM settings below</p>
+        
+        <div style="margin: 10px 0;">
+            RAM: <input type="number" id="ram_val" value="400" style="width: 60px;"> MB | 
+            VRAM: <input type="number" id="vram_val" value="36" style="width: 50px;"> MB
         </div>
+
+        <button id="boot_btn" class="btn-start">START EMULATION</button>
     </div>
 
-    <div id="container">
-        <div id="screen_container">
-            <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
-            <canvas id="v86_canvas"></canvas>
-        </div>
-
-        <div class="controls">
-            <p style="margin-top:0;">SELECT ANDROID ISO (e.g. 358MB File)</p>
-            <input type="file" id="iso_input">
-        </div>
+    <div id="screen_container">
+        <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
+        <canvas id="v86_canvas"></canvas>
     </div>
 
     <script>
-        document.getElementById("iso_input").onchange = function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        document.getElementById("boot_btn").onclick = function() {
+            const fileInput = document.getElementById("cd_file");
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert("Please select your Android ISO first!");
+                return;
+            }
 
-            // Initialize the emulator with your EXACT specs
+            // Grab your manual settings from the boxes
+            const userRam = document.getElementById("ram_val").value;
+            const userVram = document.getElementById("vram_val").value;
+
             const emulator = new V86Starter({
-                // Using the official WASM and BIOS files
                 wasm_path: "https://copy.sh/v86/build/v86.wasm",
-                bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
-                vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
-                
-                // YOUR SETTINGS: 400MB RAM, 36MB VRAM
-                memory_size: 400 * 1024 * 1024,
-                vga_memory_size: 36 * 1024 * 1024,
-                
+                memory_size: parseInt(userRam) * 1024 * 1024,
+                vga_memory_size: parseInt(userVram) * 1024 * 1024,
                 screen_container: document.getElementById("screen_container"),
                 canvas: document.getElementById("v86_canvas"),
+                bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
+                vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
                 cdrom: { file: file },
                 autostart: true,
             });
 
-            console.log("Emulation started with local ISO.");
+            // Hide the setup box once running to save screen space
+            document.querySelector(".setup-box").style.opacity = "0.5";
+            this.innerText = "SYSTEM RUNNING";
+            this.disabled = true;
         };
     </script>
 </body>
