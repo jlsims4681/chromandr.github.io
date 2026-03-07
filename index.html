@@ -1,37 +1,49 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>x86 Runner</title>
+    <style>
+        body { background: #111; color: #00ff41; font-family: monospace; text-align: center; }
+        #screen_container { margin: 20px auto; width: 800px; background: #000; border: 2px solid #333; }
+        canvas { display: block; margin: 0 auto; }
+        .controls { background: #222; padding: 15px; border-radius: 8px; display: inline-block; }
+        input { background: #333; color: white; border: 1px solid #444; padding: 5px; }
+    </style>
     <script src="https://copy.sh/v86/build/libv86.js"></script>
 </head>
-<body style="background:#000; color:#00ff41; font-family:monospace; text-align:center;">
+<body>
 
-    <h3>CORE RUNNER (400MB RAM)</h3>
-    <input type="file" id="iso_input">
-    <div id="status" style="margin:10px; color:#888;">WAITING FOR ISO...</div>
+    <h1>ANDROID MASTER CONSOLE</h1>
+    
+    <div class="controls">
+        <p>1. Upload ISO to Drive (Optional) or Pick Local:</p>
+        <input type="file" id="iso_picker">
+        <p style="font-size: 10px; color: #888;">Settings: 400MB RAM | x86 Mode</p>
+    </div>
 
     <div id="screen_container">
         <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
-        <canvas></canvas>
+        <canvas id="v86_canvas"></canvas>
     </div>
 
     <script>
-        document.getElementById("iso_input").onchange = function(e) {
+        document.getElementById("iso_picker").onchange = function(e) {
             const file = e.target.files[0];
             if (!file) return;
 
-            document.getElementById("status").innerText = "STARTING ENGINE...";
-
+            // Initialize v86 with the exact specs: 400MB RAM, 36MB VRAM
             var emulator = new V86Starter({
                 wasm_path: "https://copy.sh/v86/build/v86.wasm",
-                memory_size: 400 * 1024 * 1024, // Your 400MB setting
-                vga_memory_size: 36 * 1024 * 1024, // Your 36MB VRAM setting
+                memory_size: 400 * 1024 * 1024,
+                vga_memory_size: 36 * 1024 * 1024,
                 screen_container: document.getElementById("screen_container"),
+                canvas: document.getElementById("v86_canvas"),
                 bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
                 vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
                 cdrom: { file: file },
                 autostart: true,
             });
+
+            console.log("Emulator Started with 400MB RAM");
         };
     </script>
 </body>
