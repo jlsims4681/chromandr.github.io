@@ -2,23 +2,29 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Chromandr.io | v86 Runner</title>
+    <title>ISO Runner | x86 Manual</title>
     <script src="https://copy.sh/v86/build/libv86.js"></script>
     <style>
-        body { margin: 0; background: #000; color: #00ff41; font-family: monospace; }
-        #ui { padding: 20px; text-align: center; border-bottom: 1px solid #222; }
-        #screen_container { width: 100%; height: 80vh; display: flex; justify-content: center; align-items: center; }
-        canvas { background: #000; border: 1px solid #333; }
-        .status { font-size: 12px; color: #888; }
+        body { margin: 0; background: #000; color: #00ff41; font-family: monospace; text-align: center; }
+        #ui { padding: 20px; background: #111; border-bottom: 2px solid #333; }
+        #screen_container { margin-top: 20px; display: flex; justify-content: center; }
+        canvas { border: 1px solid #444; background: #000; cursor: crosshair; }
+        .btn { background: #00ff41; color: #000; border: none; padding: 12px 25px; font-weight: bold; cursor: pointer; border-radius: 4px; }
+        .status { margin-top: 10px; font-size: 12px; color: #888; }
     </style>
 </head>
 <body>
 
     <div id="ui">
-        <h2 style="color:white; margin:5px;">V86 ANDROID RUNNER</h2>
-        <p class="status">STABILITY MODE: 4GB RAM OPTIMIZED</p>
-        <input type="file" id="iso_file">
-        <div id="log" style="margin-top:10px;">WAITING FOR ISO...</div>
+        <h2 style="color:white; margin-bottom:5px;">x86 ISO RUNNER</h2>
+        <div id="msg">SYSTEM IDLE</div>
+        
+        <button id="start_engine" class="btn">1. START ENGINE</button>
+
+        <div id="step2" style="display:none; margin-top:10px;">
+            <p>ENGINE READY. INSERT ISO:</p>
+            <input type="file" id="iso_input" accept=".iso">
+        </div>
     </div>
 
     <div id="screen_container">
@@ -27,37 +33,44 @@
     </div>
 
     <script>
-        const log = document.getElementById("log");
-        
-        document.getElementById("iso_file").onchange = function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        let emulator;
+        const msg = document.getElementById("msg");
 
-            log.innerText = "INITIALIZING ENGINE...";
-            log.style.color = "#ffaa00";
+        document.getElementById("start_engine").onclick = function() {
+            this.style.display = "none";
+            msg.innerText = "LOADING VIRTUAL HARDWARE...";
 
-            // v86 auto-configures the virtual hardware for the ISO
-            const emulator = new V86Starter({
+            // Initialize the x86 hardware without a disk
+            emulator = new V86Starter({
                 wasm_path: "https://copy.sh/v86/build/v86.wasm",
-                memory_size: 1024 * 1024 * 1024, // Allocates 1GB for Android
-                vga_memory_size: 16 * 1024 * 1024,
+                memory_size: 1024 * 1024 * 1024, // 1GB RAM for the guest
+                vga_memory_size: 32 * 1024 * 1024,
                 screen_container: document.getElementById("screen_container"),
                 canvas: document.getElementById("v86_canvas"),
                 bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
                 vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
-                cdrom: { file: file }, // Auto-loads your selected ISO
                 autostart: true,
             });
 
-            emulator.add_listener("emulator-ready", function() {
-                log.innerText = "ANDROID BOOTING (PLEASE WAIT)...";
-                log.style.color = "#00ff41";
-            });
+            // Once SeaBIOS loads, we allow the file input
+            setTimeout(() => {
+                msg.innerText = "HARDWARE READY";
+                document.getElementById("step2").style.display = "block";
+            }, 1500);
+        };
 
-            // If the RAM fills up, v86 will log it here instead of crashing the tab
-            emulator.add_listener("download-error", function() {
-                log.innerText = "NETWORK ERROR: CHECK WIFI";
-                log.style.color = "#ff4444";
+        document.getElementById("iso_input").onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            msg.innerText = "DISC INSERTED. BOOTING...";
+            
+            // This 'hot-swaps' the file into the virtual CD drive
+            emulator.create_file_source(file, function(source) {
+                emulator.set_cdrom(source);
+                
+                // Force a hardware reset to recognize the new disc
+                emulator.restart(); 
             });
         };
     </script>
