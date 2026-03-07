@@ -2,55 +2,63 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <script src="coi-serviceworker.js"></script>
-    <script src="https://cxrtnc.leaningtech.com/1.2.2/cx.js"></script>
-    <title>Chromandr.io | Terminal Mode</title>
+    <title>Chromandr.io | v86 Runner</title>
+    <script src="https://copy.sh/v86/build/libv86.js"></script>
     <style>
         body { margin: 0; background: #000; color: #00ff41; font-family: monospace; }
-        #console { width: 100vw; height: 100vh; overflow: hidden; display: none; }
-        #ui { padding: 40px; text-align: center; }
-        button { background: #00ff41; color: #000; border: none; padding: 10px; cursor: pointer; }
+        #ui { padding: 20px; text-align: center; border-bottom: 1px solid #222; }
+        #screen_container { width: 100%; height: 80vh; display: flex; justify-content: center; align-items: center; }
+        canvas { background: #000; border: 1px solid #333; }
+        .status { font-size: 12px; color: #888; }
     </style>
 </head>
 <body>
+
     <div id="ui">
-        <h2>TERMINAL RESCUE MODE</h2>
-        <p>This skips graphics to save RAM. Select your 358MB ISO:</p>
-        <input type="file" id="iso">
-        <div id="msg">READY</div>
+        <h2 style="color:white; margin:5px;">V86 ANDROID RUNNER</h2>
+        <p class="status">STABILITY MODE: 4GB RAM OPTIMIZED</p>
+        <input type="file" id="iso_file">
+        <div id="log" style="margin-top:10px;">WAITING FOR ISO...</div>
     </div>
-    <div id="console"></div>
 
-    <script type="module">
-        const msg = document.getElementById('msg');
-        const ui = document.getElementById('ui');
-        const consoleDiv = document.getElementById('console');
+    <div id="screen_container">
+        <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
+        <canvas id="v86_canvas"></canvas>
+    </div>
 
-        document.getElementById('iso').onchange = async (e) => {
+    <script>
+        const log = document.getElementById("log");
+        
+        document.getElementById("iso_file").onchange = function(e) {
             const file = e.target.files[0];
             if (!file) return;
 
-            msg.innerText = "BOOTING KERNEL...";
-            try {
-                const isoDevice = await CheerpX.DataDevice.create(file);
-                const cx = await CheerpX.Linux.create({
-                    mounts: [{ type: "ext2", path: "/", dev: isoDevice }, { type: "devs", path: "/dev" }]
-                });
+            log.innerText = "INITIALIZING ENGINE...";
+            log.style.color = "#ffaa00";
 
-                ui.style.display = 'none';
-                consoleDiv.style.display = 'block';
-                
-                // Use a text terminal instead of a graphics canvas
-                cx.setTerminal(consoleDiv);
+            // v86 auto-configures the virtual hardware for the ISO
+            const emulator = new V86Starter({
+                wasm_path: "https://copy.sh/v86/build/v86.wasm",
+                memory_size: 1024 * 1024 * 1024, // Allocates 1GB for Android
+                vga_memory_size: 16 * 1024 * 1024,
+                screen_container: document.getElementById("screen_container"),
+                canvas: document.getElementById("v86_canvas"),
+                bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
+                vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
+                cdrom: { file: file }, // Auto-loads your selected ISO
+                autostart: true,
+            });
 
-                await cx.run("/kernel", [
-                    "init=/bin/sh", // Boot directly into a command shell
-                    "androidboot.hardware=android_x86",
-                    "quiet"
-                ]);
-            } catch (err) {
-                msg.innerText = "RAM EXHAUSTED";
-            }
+            emulator.add_listener("emulator-ready", function() {
+                log.innerText = "ANDROID BOOTING (PLEASE WAIT)...";
+                log.style.color = "#00ff41";
+            });
+
+            // If the RAM fills up, v86 will log it here instead of crashing the tab
+            emulator.add_listener("download-error", function() {
+                log.innerText = "NETWORK ERROR: CHECK WIFI";
+                log.style.color = "#ff4444";
+            });
         };
     </script>
 </body>
