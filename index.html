@@ -1,27 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>v86 x86 Setup Runner</title>
-    <style>
-        /* This makes the runner take up the full screen */
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            overflow: hidden; 
-            background: #000; 
-        }
-        iframe { 
-            width: 100%; 
-            height: 100%; 
-            border: none; 
-        }
-    </style>
+    <title>x86 Runner</title>
+    <script src="https://copy.sh/v86/build/libv86.js"></script>
 </head>
-<body>
+<body style="background:#000; color:#00ff41; font-family:monospace; text-align:center;">
 
-    <iframe src="https://copy.sh/v86/#setup&m=400&vram=36"></iframe>
+    <h3>CORE RUNNER (400MB RAM)</h3>
+    <input type="file" id="iso_input">
+    <div id="status" style="margin:10px; color:#888;">WAITING FOR ISO...</div>
 
+    <div id="screen_container">
+        <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
+        <canvas></canvas>
+    </div>
+
+    <script>
+        document.getElementById("iso_input").onchange = function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById("status").innerText = "STARTING ENGINE...";
+
+            var emulator = new V86Starter({
+                wasm_path: "https://copy.sh/v86/build/v86.wasm",
+                memory_size: 400 * 1024 * 1024, // Your 400MB setting
+                vga_memory_size: 36 * 1024 * 1024, // Your 36MB VRAM setting
+                screen_container: document.getElementById("screen_container"),
+                bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
+                vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
+                cdrom: { file: file },
+                autostart: true,
+            });
+        };
+    </script>
 </body>
 </html>
