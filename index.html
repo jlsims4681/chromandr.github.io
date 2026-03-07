@@ -1,27 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <script src="https://copy.sh/v86/build/libv86.js"></script>
+    <meta charset="UTF-8">
+    <title>v86 x86 Runner</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
 </head>
-<body style="background:#000;">
+<body>
 
-    <div id="screen_container">
-        <div style="white-space: pre; font: 14px monospace; line-height: 14px"></div>
-        <canvas></canvas>
-    </div>
+    <iframe src="https://copy.sh/v86/?profile=custom&m=400&vram=36"></iframe>
 
-    <script>
-        window.onload = function() {
-            var emulator = new V86Starter({
-                wasm_path: "https://copy.sh/v86/build/v86.wasm",
-                memory_size: 512 * 1024 * 1024,
-                vga_memory_size: 8 * 1024 * 1024,
-                screen_container: document.getElementById("screen_container"),
-                bios: { url: "https://copy.sh/v86/bios/seabios.bin" },
-                vga_bios: { url: "https://copy.sh/v86/bios/vgabios.bin" },
-                autostart: true,
-            });
-        };
-    </script>
 </body>
 </html>
