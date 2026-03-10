@@ -1,66 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Master Console v7.0 - 2026</title>
+    <title>Master Console v9.0 - File Bridge</title>
     <style>
-        body { margin: 0; background: #000d1a; font-family: 'Courier New', monospace; color: #00d4ff; overflow: hidden; }
-        #desktop { width: 100vw; height: 100vh; position: relative; }
+        /* Keeping your loved OS look */
+        body { margin: 0; background: #000; color: #00d4ff; font-family: 'Courier New', monospace; overflow: hidden; }
+        #desktop { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+        #nav-bar { height: 40px; background: #001b22; border-bottom: 1px solid #00d4ff; display: flex; align-items: center; padding: 0 15px; gap: 20px; z-index: 100; }
+        #workspace { flex-grow: 1; display: flex; position: relative; }
+        #sidebar { width: 260px; background: #050505; border-right: 1px solid #00d4ff; padding: 15px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
         
-        .window {
-            position: absolute; width: 800px; height: 550px;
-            background: #111; border: 1px solid #00d4ff;
-            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
-            display: flex; flex-direction: column; z-index: 10;
-        }
+        /* New File Bridge Styling */
+        .file-bridge { background: #0a1a1f; border: 1px dashed #00d4ff; padding: 10px; margin-top: 10px; }
+        .url-display { background: #000; color: #ffca00; padding: 5px; font-size: 10px; word-break: break-all; margin-top: 5px; border: 1px solid #333; }
 
-        .title-bar { background: #002b36; padding: 10px; cursor: move; display: flex; justify-content: space-between; align-items: center; }
-        .close-btn { color: #ff5f56; cursor: pointer; font-weight: bold; }
-        
-        .win-tools { 
-            background: #0a191e; padding: 5px; display: flex; gap: 8px; 
-            border-bottom: 1px solid #00d4ff; font-size: 11px;
-        }
-        
-        .tool-btn { 
-            background: transparent; color: #00d4ff; border: 1px solid #00d4ff; 
-            cursor: pointer; padding: 2px 10px; transition: 0.2s;
-        }
-        .tool-btn:hover { background: #00d4ff; color: #000; }
-
-        .content { flex-grow: 1; background: #000; position: relative; overflow: hidden; }
+        #emu-window { flex-grow: 1; background: #000; position: relative; }
+        #v86_container { width: 100%; height: 100%; }
         canvas { width: 100%; height: 100%; object-fit: contain; }
-
-        .icon { 
-            width: 100px; text-align: center; margin: 20px; cursor: pointer; 
-            display: inline-block; transition: 0.3s; 
-        }
-        .icon-box { 
-            width: 50px; height: 50px; background: #00d4ff; border-radius: 8px; 
-            margin: 0 auto 5px; display: flex; align-items: center; justify-content: center;
-            color: black; font-weight: bold; font-size: 20px;
-        }
+        
+        .btn { background: #000; border: 1px solid #00d4ff; color: #00d4ff; padding: 8px; cursor: pointer; font-size: 11px; }
+        .btn:hover { background: #00d4ff; color: #000; }
+        input[type="text"] { background: #000; border: 1px solid #00d4ff; color: #00d4ff; padding: 5px; font-family: inherit; }
+        label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
     </style>
 </head>
 <body>
 
 <div id="desktop">
-    <div class="icon" onclick="bootAndroid32()">
-        <div class="icon-box">AD</div>
-        <span>Android 3.2</span>
+    <div id="nav-bar">
+        <span>MASTER CONSOLE v9.0</span>
+        <div id="status-light" style="font-size:10px; color:#555;">● DISCONNECTED</div>
     </div>
 
-    <div id="os-window" class="window" style="display:none;">
-        <div class="title-bar">
-            <span>SYSTEM_OS: ANDROID_3.2_x86</span>
-            <span class="close-btn" onclick="this.parentElement.parentElement.style.display='none'">[X]</span>
+    <div id="workspace">
+        <div id="sidebar">
+            <label>1. System Source</label>
+            <input type="text" id="iso-url" placeholder="Paste .iso link...">
+            <button class="btn" onclick="initEmulator()">🚀 BOOT SYSTEM</button>
+
+            <label>2. File Bridge (Inject APKs)</label>
+            <div class="file-bridge">
+                <input type="file" id="local-file" onchange="bridgeFile(this)">
+                <div id="bridge-status" style="font-size:9px; margin-top:5px;">No file bridged</div>
+                <div id="bridge-url" class="url-display">URL will appear here...</div>
+            </div>
+
+            <label>3. Controls</label>
+            <button class="btn" onclick="saveState()">💾 SAVE SNAPSHOT</button>
+            <button class="btn" onclick="document.getElementById('state-upload').click()">📂 LOAD SNAPSHOT</button>
+            <input type="file" id="state-upload" style="display:none" onchange="loadState(this)">
+            
+            <button class="btn" onclick="toggleFullscreen()">📺 FULLSCREEN</button>
+            <button class="btn" style="color:#ff5f56; border-color:#ff5f56;" onclick="runMasterReset()">☢️ REDONE (UNLOCK)</button>
         </div>
-        <div class="win-tools">
-            <button class="tool-btn" onclick="refit()">REFIT</button>
-            <button class="tool-btn" onclick="runMasterReset()" style="border-color: #ff5f56; color: #ff5f56;">REDONE</button>
-            <button class="tool-btn" onclick="saveState()">SAVE</button>
-            <span id="status" style="margin-left: 10px; opacity: 0.5;">READY</span>
+
+        <div id="emu-window">
+            <div id="v86_container"></div>
         </div>
-        <div id="v86_container" class="content"></div>
     </div>
 </div>
 
@@ -68,87 +64,79 @@
 
 <script>
     let emulator = null;
+    let bridgedBlobUrl = null;
 
-    function bootAndroid32() {
-        const win = document.getElementById('os-window');
-        win.style.display = 'flex';
+    // --- FILE BRIDGE LOGIC ---
+    function bridgeFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Revoke old URL to save memory
+        if (bridgedBlobUrl) URL.revokeObjectURL(bridgedBlobUrl);
+
+        // Create a local blob URL
+        bridgedBlobUrl = URL.createObjectURL(file);
         
-        if (emulator) return; // Don't boot twice
+        document.getElementById('bridge-status').innerText = `Bridging: ${file.name}`;
+        // In a real v86 setup, you'd use a local webserver, 
+        // but for this console, we display the name to remind you to use the Drive method
+        document.getElementById('bridge-url').innerText = "Open Browser in Android and go to your Google Drive to pull this file.";
+        
+        alert("File ready. Since Android 3.2 is isolated, please upload this to your shared Drive folder to access it inside the VM.");
+    }
 
-        const isoUrl = "YOUR_ANDROID_3.2_ISO_LINK_HERE"; 
+    // --- EMULATOR CORE ---
+    function initEmulator() {
+        const url = document.getElementById('iso-url').value;
+        if (!url) { alert("Paste ISO URL!"); return; }
         
         emulator = new V86Starter({
             wasm_path: "https://unpkg.com/v86@0.5.44/build/v86.wasm",
-            memory_size: 800 * 1024 * 1024, // Optimized for Honeycomb
+            memory_size: 800 * 1024 * 1024,
             vga_memory_size: 16 * 1024 * 1024,
             screen_container: document.getElementById('v86_container'),
             bios: { url: "https://unpkg.com/v86@0.5.44/bios/seabios.bin" },
             vga_bios: { url: "https://unpkg.com/v86@0.5.44/bios/vgabios.bin" },
-            cdrom: { url: isoUrl },
+            cdrom: { url: url },
             network_relay_url: "wss://relay.bemmu.com/",
-            net_device: "ne2k_pci", // More compatible with old Android
+            net_device: "ne2k_pci",
             autostart: true,
         });
 
-        emulator.add_listener("serial0-output-char", (c) => {
-            document.getElementById('status').innerText = "KERNEL_ACTIVE";
+        emulator.add_listener("serial0-output-char", () => {
+            document.getElementById('status-light').style.color = "#00d4ff";
+            document.getElementById('status-light').innerText = "● KERNEL_LIVE";
         });
-        
-        window.lastEmulator = emulator;
     }
 
-    // THE MASTER RESET (Redo logic)
-    function runMasterReset() {
-        if (!window.lastEmulator) return;
-        
-        // Automated shell commands to clear lock-state files
-        const sequence = [
-            "su",
-            "mount -o remount,rw /data",
-            "rm -f /data/system/*.key",
-            "rm -f /data/system/locksettings.db*",
-            "sync",
-            "echo 'SYSTEM_OPTIMIZED'",
-            "\n"
-        ].join("\n");
-
-        for (let i = 0; i < sequence.length; i++) {
-            window.lastEmulator.serial0_send(sequence.charCodeAt(i));
-        }
-        alert("Kernel command sent. Please allow 10 seconds for the system to update.");
-    }
-
-    function refit() {
-        window.dispatchEvent(new Event('resize'));
-        const canvas = document.querySelector('canvas');
-        if (canvas) {
-            canvas.style.width = '100%';
-            canvas.style.height = '100%';
-        }
-    }
-
+    // --- STATE & UTILS ---
     async function saveState() {
-        if (!window.lastEmulator) return;
-        const state = await window.lastEmulator.save_state();
-        const blob = new Blob([state]);
+        if (!emulator) return;
+        const state = await emulator.save_state();
         const a = document.createElement("a");
-        a.href = window.URL.createObjectURL(blob);
-        a.download = "android_32_snapshot.bin";
+        a.href = window.URL.createObjectURL(new Blob([state]));
+        a.download = "session.bin";
         a.click();
     }
 
-    // Window Dragging Logic
-    const win = document.getElementById('os-window');
-    const bar = win.querySelector('.title-bar');
-    bar.onmousedown = (e) => {
-        let x = e.clientX - win.offsetLeft, y = e.clientY - win.offsetTop;
-        document.onmousemove = (ev) => {
-            win.style.left = (ev.clientX - x) + 'px';
-            win.style.top = (ev.clientY - y) + 'px';
-        };
-    };
-    document.onmouseup = () => document.onmousemove = null;
+    function loadState(input) {
+        if (!emulator || !input.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = (e) => { emulator.restore_state(e.target.result); };
+        reader.readAsArrayBuffer(input.files[0]);
+    }
 
+    function toggleFullscreen() {
+        const el = document.getElementById('emu-window');
+        if (el.requestFullscreen) el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }
+
+    function runMasterReset() {
+        if (!emulator) return;
+        const seq = ["su", "mount -o remount,rw /data", "rm -f /data/system/*.key", "sync", "reboot", "\n"].join("\n");
+        for (let i = 0; i < seq.length; i++) emulator.serial0_send(seq.charCodeAt(i));
+    }
 </script>
 </body>
 </html>
