@@ -22,7 +22,7 @@
 
     <div id="active-ui" style="display:none;">
         <div id="header">
-            <span id="stat">STATUS: CONNECTING TO RELAY...</span>
+            <span id="stat">STATUS: CONNECTING...</span>
         </div>
         <div id="emu-wrapper">
             <iframe id="v86-frame" allowfullscreen></iframe>
@@ -34,7 +34,7 @@
         const frame = document.getElementById('v86-frame');
         const iso = "https://mirrors.kernel.org/android-x86/Release-9.0/android-x86_64-9.0-r2.iso";
         
-        const proxy = "wss://relay.widgetry.org/";
+        const proxy = "wss://relay.bemmu.com/"; // 
 
         const v86Url = "https://copy.sh/v86/" + 
                        "?autostart=true" + 
