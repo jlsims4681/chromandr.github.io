@@ -2,11 +2,11 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>v86 Emulator</title>
-    <link rel="stylesheet" href="v86-engine/v86.css">
-    <script src="v86-engine/libv86.js"></script>
+    <title>Official v86 Native</title>
+    <link rel="stylesheet" href="v86.css">
+    <script src="libv86.js"></script>
 </head>
-<body style="background-color: black; color: white;">
+<body style="background: #000;">
 
     <div id="boot_options">
         <input type="file" id="cd_image">
@@ -22,7 +22,6 @@
         </div>
 
         <div id="stats">
-            <div id="log"></div>
             <div class="stats_inner">
                 <div id="speed">Speed: 0 mIPS</div>
                 <div id="vga_mode">VGA Mode: Text</div>
@@ -39,26 +38,26 @@
             if (!file) return;
 
             emulator = new V86Starter({
-                wasm_path: "v86-engine/v86.wasm",
+                wasm_path: "v86.wasm",
                 memory_size: 256 * 1024 * 1024,
                 vga_memory_size: 8 * 1024 * 1024,
                 screen_container: document.getElementById("screen_container"),
-                bios: { url: "v86-engine/seabios.bin" },
-                vga_bios: { url: "v86-engine/vgabios.bin" },
+                bios: { url: "seabios.bin" },
+                vga_bios: { url: "vgabios.bin" },
                 cdrom: { buffer: file },
                 autostart: true,
             });
 
-            // Monitor speed (mIPS) just like the official site
+            // This creates the real mIPS counter from your screenshot
             setInterval(function() {
-                if(emulator.is_running()) {
+                if (emulator.is_running()) {
                     document.getElementById("speed").innerText = 
                         "Speed: " + (emulator.get_instruction_counter() / 1000000).toFixed(1) + " mIPS";
                 }
             }, 1000);
         };
 
-        // Official Save Logic
+        // Official Save/Load Logic
         document.getElementById("save_state").onclick = function() {
             emulator.save_state(function(error, result) {
                 var a = document.createElement("a");
@@ -68,16 +67,14 @@
             });
         };
 
-        // Official Load Logic
         document.getElementById("restore_state").onclick = function() {
             document.getElementById("restore_state_input").click();
         };
 
         document.getElementById("restore_state_input").onchange = function(e) {
-            var file = e.target.files[0];
             var reader = new FileReader();
             reader.onload = function() { emulator.restore_state(reader.result); };
-            reader.readAsArrayBuffer(file);
+            reader.readAsArrayBuffer(e.target.files[0]);
         };
     </script>
 </body>
