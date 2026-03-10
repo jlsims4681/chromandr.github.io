@@ -1,43 +1,40 @@
 <!doctype html>
 <html>
 <head>
-    <title>Android v86 - Save/Load Edition</title>
+    <meta charset="utf-8">
+    <title>v86 Emulator</title>
+    <link rel="stylesheet" href="v86-engine/v86.css">
     <script src="v86-engine/libv86.js"></script>
-    <style>
-        body { background: #111; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
-        #screen_container { margin: 20px auto; border: 3px solid #444; display: inline-block; background: #000; }
-        .menu { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
-        button { padding: 10px; margin: 5px; cursor: pointer; background: #444; color: white; border: none; border-radius: 5px; }
-        button:hover { background: #666; }
-        .save-btn { background: #28a745; }
-        .load-btn { background: #007bff; }
-    </style>
 </head>
-<body>
+<body style="background-color: black; color: white;">
 
-    <div class="menu">
-        <h3>1. Setup</h3>
-        <input type="file" id="iso_selector" accept=".iso">
-        
-        <hr style="border: 0.5px solid #333; margin: 15px;">
-        
-        <h3>2. Controls</h3>
-        <button class="save-btn" onclick="saveProgress()">💾 Save State (Download .bin)</button>
-        <br>
-        <label>Load State File:</label>
-        <input type="file" id="state_loader" accept=".bin">
+    <div id="boot_options">
+        <input type="file" id="cd_image">
+        <button id="save_state">Save State</button>
+        <button id="restore_state">Load State</button>
+        <input type="file" id="restore_state_input" style="display:none">
     </div>
 
-    <div id="screen_container">
-        <div style="white-space: pre; font-family: monospace"></div>
-        <canvas style="display: none"></canvas>
+    <div style="display: flex;">
+        <div id="screen_container">
+            <div style="white-space: pre; font-family: monospace"></div>
+            <canvas></canvas>
+        </div>
+
+        <div id="stats">
+            <div id="log"></div>
+            <div class="stats_inner">
+                <div id="speed">Speed: 0 mIPS</div>
+                <div id="vga_mode">VGA Mode: Text</div>
+                <div id="mouse_enabled">Mouse: No</div>
+            </div>
+        </div>
     </div>
 
     <script>
         var emulator;
 
-        // START THE EMULATOR
-        document.getElementById("iso_selector").onchange = function(e) {
+        document.getElementById("cd_image").onchange = function(e) {
             var file = e.target.files[0];
             if (!file) return;
 
@@ -51,35 +48,35 @@
                 cdrom: { buffer: file },
                 autostart: true,
             });
-            
-            window.onclick = function() { emulator.focus(); };
+
+            // Monitor speed (mIPS) just like the official site
+            setInterval(function() {
+                if(emulator.is_running()) {
+                    document.getElementById("speed").innerText = 
+                        "Speed: " + (emulator.get_instruction_counter() / 1000000).toFixed(1) + " mIPS";
+                }
+            }, 1000);
         };
 
-        // SAVE FUNCTION
-        function saveProgress() {
-            if (!emulator) return alert("Start the emulator first!");
-            
+        // Official Save Logic
+        document.getElementById("save_state").onclick = function() {
             emulator.save_state(function(error, result) {
-                if (error) return console.error(error);
-                
                 var a = document.createElement("a");
-                a.download = "android_save.bin";
+                a.download = "v86state.bin";
                 a.href = window.URL.createObjectURL(new Blob([result]));
-                a.dataset.downloadurl = ["application/octet-stream", a.download, a.href].join(":");
                 a.click();
             });
-        }
+        };
 
-        // LOAD FUNCTION
-        document.getElementById("state_loader").onchange = function(e) {
+        // Official Load Logic
+        document.getElementById("restore_state").onclick = function() {
+            document.getElementById("restore_state_input").click();
+        };
+
+        document.getElementById("restore_state_input").onchange = function(e) {
             var file = e.target.files[0];
-            if (!file || !emulator) return alert("Pick an ISO first!");
-
             var reader = new FileReader();
-            reader.onload = function() {
-                emulator.restore_state(reader.result);
-                alert("State Loaded!");
-            };
+            reader.onload = function() { emulator.restore_state(reader.result); };
             reader.readAsArrayBuffer(file);
         };
     </script>
