@@ -32,7 +32,7 @@
             background: #000;
         }
         
-        /* The Iframe is the key to bypassing local script blocks */
+
         iframe { 
             width: 100%; 
             height: 100%; 
@@ -87,13 +87,11 @@
         const ui = document.getElementById('setup-ui');
         const activeUi = document.getElementById('active-ui');
         
-        // Android 9 is heavy (requires 2GB RAM). 
-        // If your Chromebook lags, change memory_size to 1024.
+     
         const mem = "2048";
         const vgaMem = "32";
         
-        // We use the copy.sh engine as the host
-        // This puts the "Refuse to Connect" risk on their server, not yours
+
         const iso = "https://mirrors.kernel.org/android-x86/Release-9.0/android-x86_64-9.0-r2.iso";
         
         const v86Url = "https://copy.sh/v86/" + 
@@ -101,16 +99,15 @@
                        "&memory_size=" + mem + 
                        "&vga_memory_size=" + vgaMem + 
                        "&cdrom=" + encodeURIComponent(iso);
-        
-        // Inject the URL into the frame
+ 
         frame.src = v86Url;
         
-        // Switch UI
+
         ui.style.display = "none";
         activeUi.style.display = "block";
         wrapper.style.display = "block";
         
-        console.log("Master Console: Iframe injected. Awaiting kernel response...");
+        console.log("Master Console: Iframe injected. waiting for server...");
       }
     </script>
 </body>
