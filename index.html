@@ -1,23 +1,31 @@
 <!doctype html>
 <html>
 <head>
-    <title>Android v86 - Direct Load</title>
+    <title>Android v86 - Save/Load Edition</title>
     <script src="v86-engine/libv86.js"></script>
     <style>
         body { background: #111; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
         #screen_container { margin: 20px auto; border: 3px solid #444; display: inline-block; background: #000; }
-        .load-panel { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
-        input { margin: 10px; padding: 5px; }
+        .menu { background: #222; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
+        button { padding: 10px; margin: 5px; cursor: pointer; background: #444; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #666; }
+        .save-btn { background: #28a745; }
+        .load-btn { background: #007bff; }
     </style>
 </head>
 <body>
 
-    <div class="load-panel">
-        <h3>Step 1: Load your Android ISO</h3>
+    <div class="menu">
+        <h3>1. Setup</h3>
         <input type="file" id="iso_selector" accept=".iso">
         
-        <p style="font-size: 12px; color: #888;">(Optional: Load a Save State .bin file after starting)</p>
-        <input type="file" id="state_selector" accept=".bin">
+        <hr style="border: 0.5px solid #333; margin: 15px;">
+        
+        <h3>2. Controls</h3>
+        <button class="save-btn" onclick="saveProgress()">💾 Save State (Download .bin)</button>
+        <br>
+        <label>Load State File:</label>
+        <input type="file" id="state_loader" accept=".bin">
     </div>
 
     <div id="screen_container">
@@ -28,7 +36,7 @@
     <script>
         var emulator;
 
-        // --- LOADING THE ISO ---
+        // START THE EMULATOR
         document.getElementById("iso_selector").onchange = function(e) {
             var file = e.target.files[0];
             if (!file) return;
@@ -40,23 +48,37 @@
                 screen_container: document.getElementById("screen_container"),
                 bios: { url: "v86-engine/seabios.bin" },
                 vga_bios: { url: "v86-engine/vgabios.bin" },
-                cdrom: { buffer: file }, // This loads the file you picked
+                cdrom: { buffer: file },
                 autostart: true,
             });
-
-            // Focus fix: Clicking the screen makes it active
+            
             window.onclick = function() { emulator.focus(); };
         };
 
-        // --- LOADING A SAVE STATE (.bin) ---
-        document.getElementById("state_selector").onchange = function(e) {
+        // SAVE FUNCTION
+        function saveProgress() {
+            if (!emulator) return alert("Start the emulator first!");
+            
+            emulator.save_state(function(error, result) {
+                if (error) return console.error(error);
+                
+                var a = document.createElement("a");
+                a.download = "android_save.bin";
+                a.href = window.URL.createObjectURL(new Blob([result]));
+                a.dataset.downloadurl = ["application/octet-stream", a.download, a.href].join(":");
+                a.click();
+            });
+        }
+
+        // LOAD FUNCTION
+        document.getElementById("state_loader").onchange = function(e) {
             var file = e.target.files[0];
-            if (!file || !emulator) return;
+            if (!file || !emulator) return alert("Pick an ISO first!");
 
             var reader = new FileReader();
             reader.onload = function() {
                 emulator.restore_state(reader.result);
-                console.log("State loaded!");
+                alert("State Loaded!");
             };
             reader.readAsArrayBuffer(file);
         };
