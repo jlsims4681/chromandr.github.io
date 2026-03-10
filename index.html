@@ -1,57 +1,154 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Android (later windows)</title>
+    <title>Master Console v7.0 - 2026</title>
     <style>
-        body { background: #000; color: #00d4ff; font-family: 'Courier New', monospace; text-align: center; margin: 0; overflow: hidden; }
-        #header { height: 50px; border-bottom: 1px solid #00d4ff; display: flex; align-items: center; justify-content: center; background: #111; }
-        #emu-wrapper { width: 100vw; height: calc(100vh - 50px); display: none; }
-        iframe { width: 100%; height: 100%; border: none; }
-        .setup { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        button { padding: 20px 40px; background: transparent; color: #00d4ff; border: 2px solid #00d4ff; cursor: pointer; }
-        button:hover { background: #00d4ff; color: #000; }
+        body { margin: 0; background: #000d1a; font-family: 'Courier New', monospace; color: #00d4ff; overflow: hidden; }
+        #desktop { width: 100vw; height: 100vh; position: relative; }
+        
+        .window {
+            position: absolute; width: 800px; height: 550px;
+            background: #111; border: 1px solid #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            display: flex; flex-direction: column; z-index: 10;
+        }
+
+        .title-bar { background: #002b36; padding: 10px; cursor: move; display: flex; justify-content: space-between; align-items: center; }
+        .close-btn { color: #ff5f56; cursor: pointer; font-weight: bold; }
+        
+        .win-tools { 
+            background: #0a191e; padding: 5px; display: flex; gap: 8px; 
+            border-bottom: 1px solid #00d4ff; font-size: 11px;
+        }
+        
+        .tool-btn { 
+            background: transparent; color: #00d4ff; border: 1px solid #00d4ff; 
+            cursor: pointer; padding: 2px 10px; transition: 0.2s;
+        }
+        .tool-btn:hover { background: #00d4ff; color: #000; }
+
+        .content { flex-grow: 1; background: #000; position: relative; overflow: hidden; }
+        canvas { width: 100%; height: 100%; object-fit: contain; }
+
+        .icon { 
+            width: 100px; text-align: center; margin: 20px; cursor: pointer; 
+            display: inline-block; transition: 0.3s; 
+        }
+        .icon-box { 
+            width: 50px; height: 50px; background: #00d4ff; border-radius: 8px; 
+            margin: 0 auto 5px; display: flex; align-items: center; justify-content: center;
+            color: black; font-weight: bold; font-size: 20px;
+        }
     </style>
 </head>
 <body>
 
-    <div id="setup-ui" class="setup">
-        <h1>[ SYSTEM: NET_ENABLED_ANDROID ]</h1>
-        <button onclick="bootWithNet()">BOOT</button>
-        <p style="font-size: 10px; margin-top: 15px;">RELAY: WSS://RELAY.WIDGETRY.ORG</p>
+<div id="desktop">
+    <div class="icon" onclick="bootAndroid32()">
+        <div class="icon-box">AD</div>
+        <span>Android 3.2</span>
     </div>
 
-    <div id="active-ui" style="display:none;">
-        <div id="header">
-            <span id="stat">STATUS: CONNECTING...</span>
+    <div id="os-window" class="window" style="display:none;">
+        <div class="title-bar">
+            <span>SYSTEM_OS: ANDROID_3.2_x86</span>
+            <span class="close-btn" onclick="this.parentElement.parentElement.style.display='none'">[X]</span>
         </div>
-        <div id="emu-wrapper">
-            <iframe id="v86-frame" allowfullscreen></iframe>
+        <div class="win-tools">
+            <button class="tool-btn" onclick="refit()">REFIT</button>
+            <button class="tool-btn" onclick="runMasterReset()" style="border-color: #ff5f56; color: #ff5f56;">REDONE</button>
+            <button class="tool-btn" onclick="saveState()">SAVE</button>
+            <span id="status" style="margin-left: 10px; opacity: 0.5;">READY</span>
         </div>
+        <div id="v86_container" class="content"></div>
     </div>
+</div>
 
-    <script>
-      function bootWithNet() {
-        const frame = document.getElementById('v86-frame');
-        const iso = "https://mirrors.kernel.org/android-x86/Release-9.0/android-x86_64-9.0-r2.iso";
-        
-        const proxy = "wss://relay.bemmu.com/"; // 
+<script src="https://unpkg.com/v86@0.5.44/build/libv86.js"></script>
 
-        const v86Url = "https://copy.sh/v86/" + 
-                       "?autostart=true" + 
-                       "&memory_size=2048" + 
-                       "&vga_memory_size=32" + 
-                       "&networking_proxy=" + encodeURIComponent(proxy) + 
-                       "&cdrom=" + encodeURIComponent(iso);
+<script>
+    let emulator = null;
+
+    function bootAndroid32() {
+        const win = document.getElementById('os-window');
+        win.style.display = 'flex';
         
-        frame.src = v86Url;
-        document.getElementById('setup-ui').style.display = "none";
-        document.getElementById('active-ui').style.display = "block";
-        document.getElementById('emu-wrapper').style.display = "block";
+        if (emulator) return; // Don't boot twice
+
+        const isoUrl = "YOUR_ANDROID_3.2_ISO_LINK_HERE"; 
         
-        setTimeout(() => {
-            document.getElementById('stat').innerText = "STATUS: BYPASS_TUNNEL_OPEN";
-        }, 5000);
-      }
-    </script>
+        emulator = new V86Starter({
+            wasm_path: "https://unpkg.com/v86@0.5.44/build/v86.wasm",
+            memory_size: 800 * 1024 * 1024, // Optimized for Honeycomb
+            vga_memory_size: 16 * 1024 * 1024,
+            screen_container: document.getElementById('v86_container'),
+            bios: { url: "https://unpkg.com/v86@0.5.44/bios/seabios.bin" },
+            vga_bios: { url: "https://unpkg.com/v86@0.5.44/bios/vgabios.bin" },
+            cdrom: { url: isoUrl },
+            network_relay_url: "wss://relay.bemmu.com/",
+            net_device: "ne2k_pci", // More compatible with old Android
+            autostart: true,
+        });
+
+        emulator.add_listener("serial0-output-char", (c) => {
+            document.getElementById('status').innerText = "KERNEL_ACTIVE";
+        });
+        
+        window.lastEmulator = emulator;
+    }
+
+    // THE MASTER RESET (Redo logic)
+    function runMasterReset() {
+        if (!window.lastEmulator) return;
+        
+        // Automated shell commands to clear lock-state files
+        const sequence = [
+            "su",
+            "mount -o remount,rw /data",
+            "rm -f /data/system/*.key",
+            "rm -f /data/system/locksettings.db*",
+            "sync",
+            "echo 'SYSTEM_OPTIMIZED'",
+            "\n"
+        ].join("\n");
+
+        for (let i = 0; i < sequence.length; i++) {
+            window.lastEmulator.serial0_send(sequence.charCodeAt(i));
+        }
+        alert("Kernel command sent. Please allow 10 seconds for the system to update.");
+    }
+
+    function refit() {
+        window.dispatchEvent(new Event('resize'));
+        const canvas = document.querySelector('canvas');
+        if (canvas) {
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+        }
+    }
+
+    async function saveState() {
+        if (!window.lastEmulator) return;
+        const state = await window.lastEmulator.save_state();
+        const blob = new Blob([state]);
+        const a = document.createElement("a");
+        a.href = window.URL.createObjectURL(blob);
+        a.download = "android_32_snapshot.bin";
+        a.click();
+    }
+
+    // Window Dragging Logic
+    const win = document.getElementById('os-window');
+    const bar = win.querySelector('.title-bar');
+    bar.onmousedown = (e) => {
+        let x = e.clientX - win.offsetLeft, y = e.clientY - win.offsetTop;
+        document.onmousemove = (ev) => {
+            win.style.left = (ev.clientX - x) + 'px';
+            win.style.top = (ev.clientY - y) + 'px';
+        };
+    };
+    document.onmouseup = () => document.onmousemove = null;
+
+</script>
 </body>
 </html>
