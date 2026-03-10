@@ -1,104 +1,47 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-    <meta charset="utf-8">
-    <title>Official v86 Emulator</title>
+    <title>Android 2026 - Native Boot</title>
     <link rel="stylesheet" href="v86.css">
-    <script src="libv86.js"></script>
+    <script src="build/libv86.js"></script>
+    <style>
+        body { background: #000; color: #00d4ff; font-family: sans-serif; text-align: center; margin: 0; }
+        #screen_container { margin: 20px auto; display: none; }
+        canvas { border: 2px solid #00d4ff; }
+        button { padding: 20px; font-size: 20px; cursor: pointer; background: #111; color: #00d4ff; border: 1px solid #00d4ff; margin-top: 50px; }
+    </style>
 </head>
-<body style="background-color: black; color: white; margin: 0;">
+<body>
+    <h1>SYSTEM: ANDROID NATIVE</h1>
+    
+    <button id="boot-btn" onclick="startNativeBoot()">🚀 BYPASS & BOOT ANDROID 4.0</button>
 
-    <div id="boot_options" style="padding: 10px; background: #222; border-bottom: 1px solid #444;">
-        <label>Pick ISO: </label>
-        <input type="file" id="cd_image">
-        
-        <button id="start_button" style="background:#28a745; color:white; border:none; padding:5px 10px; cursor:pointer;" disabled>▶ START EMULATOR</button>
-        
-        <button id="save_state">Save State</button>
-        <button id="restore_state">Load State</button>
-        <input type="file" id="restore_state_input" style="display:none">
-    </div>
-
-    <div style="display: flex;">
-        <div id="screen_container">
-            <div style="white-space: pre; font-family: monospace"></div>
-            <canvas style="display: none"></canvas>
-        </div>
-
-        <div id="stats">
-            <div class="stats_inner">
-                <div id="speed">Speed: 0 mIPS</div>
-                <div id="vga_mode">VGA Mode: Text</div>
-                <div id="mouse_enabled">Mouse: No</div>
-            </div>
-        </div>
+    <div id="screen_container">
+        <div style="white-space: pre; font-family: monospace"></div>
+        <canvas></canvas>
     </div>
 
     <script>
-    "use strict";
+      function startNativeBoot() {
+        document.getElementById('boot-btn').style.display = "none";
+        document.getElementById('screen_container').style.display = "block";
 
-    var emulator;
-    var selectedFile;
-
-    // Detect when the ISO is picked
-    document.getElementById("cd_image").onchange = function(e) {
-        selectedFile = e.target.files[0];
-        if (selectedFile) {
-            document.getElementById("start_button").disabled = false;
-        }
-    };
-
-    // THE ACTUAL START COMMAND
-    document.getElementById("start_button").onclick = function() {
-        if (!selectedFile) return;
-
-        this.disabled = true;
-        this.innerText = "Running...";
-
-        // This is the real v86 engine ignition
-        emulator = new V86Starter({
-            wasm_path: "v86.wasm",
-            memory_size: 256 * 1024 * 1024,
-            vga_memory_size: 8 * 1024 * 1024,
+        
+        var emulator = new V86Starter({
+            wasm_path: "build/v86.wasm",
+            memory_size: 2048 * 1024 * 1024, // 2GB (Fixes the /root% error)
+            vga_memory_size: 32 * 1024 * 1024, // 32MB Video
             screen_container: document.getElementById("screen_container"),
-            bios: { url: "seabios.bin" },
-            vga_bios: { url: "vgabios.bin" },
-            cdrom: { buffer: selectedFile },
-            autostart: true, // Tells the real engine to boot now
+            bios: { url: "bios/seabios.bin" },
+            vga_bios: { url: "bios/vgabios.bin" },
+            // Direct Link to the ISO (Bypasses the pick-file menu)
+            cdrom: { url: "https://mirrors.kernel.org/android-x86/Release-9.0/android-x86_64-9.0-r2.iso" },
+            autostart: true,
         });
 
-        // The real-time instruction counter (mIPS)
-        setInterval(function() {
-            if (emulator && emulator.is_running()) {
-                document.getElementById("speed").innerText = 
-                    "Speed: " + (emulator.get_instruction_counter() / 1000000).toFixed(1) + " mIPS";
-            }
-        }, 1000);
-
+        // This makes sure your key presses go into Android
         emulator.focus();
-    };
-
-    // The real save/restore logic
-    document.getElementById("save_state").onclick = function() {
-        if(!emulator) return;
-        emulator.save_state(function(error, result) {
-            const blob = new Blob([result], {type: "application/octet-stream"});
-            const a = document.createElement("a");
-            a.download = "v86_state.bin";
-            a.href = window.URL.createObjectURL(blob);
-            a.click();
-        });
-    };
-
-    document.getElementById("restore_state").onclick = function() {
-        document.getElementById("restore_state_input").click();
-    };
-
-    document.getElementById("restore_state_input").onchange = function(e) {
-        const reader = new FileReader();
-        reader.onload = function() { emulator.restore_state(reader.result); };
-        reader.readAsArrayBuffer(e.target.files[0]);
-    };
+      }
     </script>
 </body>
 </html>
