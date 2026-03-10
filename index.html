@@ -1,36 +1,108 @@
-<!--lowkey using a iframe to my google apps script because this is pissing me off-->
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Android Master Console</title>
-    <link rel="stylesheet" href="https://copy.sh/v86/v86.css">
+    <title>Android v86 - Performance Mode</title>
+    
+    <script src="libv86.js"></script>
+
     <style>
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            height: 100%; 
-            width: 100%;
-            overflow: hidden; 
-            background-color: #000; 
+        body { background: #1a1a1a; color: #eee; font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; padding: 20px; }
+        #screen_container { 
+            margin: 20px auto; 
+            display: inline-block; 
+            border: 5px solid #333; 
+            border-radius: 8px;
+            background: #000;
+            cursor: crosshair; 
         }
-        iframe { 
-            width: 100%; 
-            height: 100%; 
+        canvas { display: none; } /* v86 handles the canvas internally */
+        .status-bar { margin-bottom: 15px; font-size: 14px; color: #0f0; }
+        button { 
+            padding: 10px 20px; 
+            background: #28a745; 
+            color: white; 
             border: none; 
-            /* This helps prevent the "glitch" by forcing a clean redraw */
-            image-rendering: pixelated;
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: bold;
         }
+        button:hover { background: #218838; }
+        .hint { margin-top: 15px; color: #888; font-size: 12px; }
     </style>
 </head>
 <body>
 
-    <iframe 
-        src="https://script.google.com/macros/s/AKfycbwWVY5dEEbcVCWQyO35090vn3BdxJd3xdIeBJHcKlMaatTFmh3Lex2ljiwPrrvUkZY/exec" 
-        allow="autoplay; keyboard-map; sync-xhr; fullscreen; cross-origin-isolated;"
-        sandbox="allow-forms allow-scripts allow-same-origin allow-popups"
-    ></iframe>
+    <h2>Lenovo 4GB - Android Runner</h2>
+    <div class="status-bar">Status: Ready (256MB Assigned)</div>
+    
+    <button onclick="loadSaveState()">⚡ Instant Load (Skip Boot)</button>
 
+    <br>
+
+    <div id="screen_container">
+        <div style="white-space: pre; font-family: monospace"></div>
+        <canvas></canvas>
+    </div>
+
+    <div class="hint">
+        <b>Controls:</b> Click inside to focus. Use <b>Arrow Keys + Enter</b> if mouse lags. <br>
+        Press <b>ESC</b> to go back in Android.
+    </div>
+
+    <script>
+        var emulator;
+
+        window.onload = function() {
+            emulator = new V86Starter({
+                wasm_path: "v86.wasm",          // MUST BE IN SAME FOLDER
+                memory_size: 256 * 1024 * 1024, // 256MB RAM
+                vga_memory_size: 8 * 1024 * 1024,
+                screen_container: document.getElementById("screen_container"),
+                
+                // BIOS Paths - Adjust if your files aren't in a /bios/ folder
+                bios: { url: "bios/seabios.bin" },
+                vga_bios: { url: "bios/vgabios.bin" },
+                
+                // Your Android File
+                cdrom: { url: "android.iso" },
+                
+                autostart: true,
+                disable_speaker: true,   // Reduces CPU load/heat
+                disable_keyboard: false, 
+                disable_mouse: false,    
+                
+                // BOOT FLAGS: Forces simple graphics to prevent the "Wait" hang
+                cmdline: "nomodeset xforcevesa androidboot.selinux=permissive",
+            });
+
+            // Auto-focus on click to fix the "Blue Box" stuck issue
+            document.getElementById("screen_container").addEventListener("click", function() {
+                emulator.focus();
+            });
+        };
+
+        // FUNCTION TO LOAD THE SAVE STATE
+        function loadSaveState() {
+            const stateFile = "v86state.bin"; // Ensure your save file is named this
+            
+            document.querySelector('.status-bar').innerText = "Status: Loading State...";
+            
+            fetch(stateFile)
+                .then(response => {
+                    if (!response.ok) throw new Error("State file not found!");
+                    return response.arrayBuffer();
+                })
+                .then(buffer => {
+                    emulator.restore_state(buffer);
+                    document.querySelector('.status-bar').innerText = "Status: Running (State Loaded)";
+                })
+                .catch(err => {
+                    alert("Error: Put 'v86state.bin' in your folder first!");
+                    document.querySelector('.status-bar').innerText = "Status: Error loading state";
+                });
+        }
+    </script>
 </body>
 </html>
