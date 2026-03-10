@@ -1,79 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Android 2026 - Master Console</title>
+    <title>Android (later windows)</title>
     <style>
-        body { 
-            background: #000; 
-            color: #00d4ff; 
-            font-family: 'Courier New', monospace; 
-            text-align: center; 
-            margin: 0; 
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden; 
-        }
-        
-        #header {
-            height: 50px;
-            border-bottom: 1px solid #00d4ff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #111;
-        }
-
-        h1 { font-size: 18px; letter-spacing: 3px; margin: 0; }
-        
-        #emu-wrapper { 
-            width: 100%; 
-            height: calc(100vh - 50px); 
-            display: none; 
-            background: #000;
-        }
-        
-
-        iframe { 
-            width: 100%; 
-            height: 100%; 
-            border: none; 
-        }
-
-        .btn-container {
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-        }
-
-        button { 
-            padding: 20px 40px; 
-            font-size: 18px; 
-            cursor: pointer; 
-            background: transparent; 
-            color: #00d4ff; 
-            border: 2px solid #00d4ff;
-            transition: 0.3s;
-        }
-        button:hover { background: #00d4ff; color: #000; box-shadow: 0 0 20px #00d4ff; }
-        
-        .status-text { font-size: 12px; opacity: 0.6; margin-top: 10px; }
+        body { background: #000; color: #00d4ff; font-family: 'Courier New', monospace; text-align: center; margin: 0; overflow: hidden; }
+        #header { height: 50px; border-bottom: 1px solid #00d4ff; display: flex; align-items: center; justify-content: center; background: #111; }
+        #emu-wrapper { width: 100vw; height: calc(100vh - 50px); display: none; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .setup { height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        button { padding: 20px 40px; background: transparent; color: #00d4ff; border: 2px solid #00d4ff; cursor: pointer; }
+        button:hover { background: #00d4ff; color: #000; }
     </style>
 </head>
 <body>
 
-    <div id="setup-ui" class="btn-container">
-        <h1>[ SYSTEM: ANDROID_X86 ]</h1>
-        <button onclick="bootAndroid()">🚀 INITIALIZE IFRAME BOOT</button>
-        <div class="status-text">NETWORK: ENCRYPTED // BYPASS: ACTIVE</div>
+    <div id="setup-ui" class="setup">
+        <h1>[ SYSTEM: NET_ENABLED_ANDROID ]</h1>
+        <button onclick="bootWithNet()">BOOT</button>
+        <p style="font-size: 10px; margin-top: 15px;">RELAY: WSS://RELAY.WIDGETRY.ORG</p>
     </div>
 
     <div id="active-ui" style="display:none;">
         <div id="header">
-            <h1>MODERN_OS // TUNNEL_ACTIVE</h1>
-            <button onclick="location.reload()" style="padding: 5px 10px; font-size: 10px; margin-left: 20px;">TERMINATE</button>
+            <span id="stat">STATUS: CONNECTING TO RELAY...</span>
         </div>
         <div id="emu-wrapper">
             <iframe id="v86-frame" allowfullscreen></iframe>
@@ -81,33 +30,27 @@
     </div>
 
     <script>
-      function bootAndroid() {
+      function bootWithNet() {
         const frame = document.getElementById('v86-frame');
-        const wrapper = document.getElementById('emu-wrapper');
-        const ui = document.getElementById('setup-ui');
-        const activeUi = document.getElementById('active-ui');
-        
-     
-        const mem = "2048";
-        const vgaMem = "32";
-        
-
         const iso = "https://mirrors.kernel.org/android-x86/Release-9.0/android-x86_64-9.0-r2.iso";
         
+        const proxy = "wss://relay.widgetry.org/";
+
         const v86Url = "https://copy.sh/v86/" + 
                        "?autostart=true" + 
-                       "&memory_size=" + mem + 
-                       "&vga_memory_size=" + vgaMem + 
+                       "&memory_size=2048" + 
+                       "&vga_memory_size=32" + 
+                       "&networking_proxy=" + encodeURIComponent(proxy) + 
                        "&cdrom=" + encodeURIComponent(iso);
- 
+        
         frame.src = v86Url;
+        document.getElementById('setup-ui').style.display = "none";
+        document.getElementById('active-ui').style.display = "block";
+        document.getElementById('emu-wrapper').style.display = "block";
         
-
-        ui.style.display = "none";
-        activeUi.style.display = "block";
-        wrapper.style.display = "block";
-        
-        console.log("Master Console: Iframe injected. waiting for server...");
+        setTimeout(() => {
+            document.getElementById('stat').innerText = "STATUS: BYPASS_TUNNEL_OPEN";
+        }, 5000);
       }
     </script>
 </body>
