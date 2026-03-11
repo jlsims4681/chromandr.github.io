@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://unpkg.com/v86@0.5.44/build/libv86.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; }
+        #screen_container { width: 100%; height: 100%; }
+        canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+    </style>
+</head>
+<body>
+    <div id="screen_container">
+        <canvas id="v86-canvas"></canvas>
+    </div>
+
+    <script>
+        let emulator = null;
+
+        window.addEventListener("message", function(event) {
+            const data = event.data;
+
+            // HANDLE BOOTING (URL or File Buffer)
+            if (data.type === "BOOT") {
+                if (emulator) emulator.destroy();
+                
+                const config = {
+                    wasm_path: "https://unpkg.com/v86@0.5.44/build/v86.wasm",
+                    memory_size: 768 * 1024 * 1024,
+                    vga_memory_size: 16 * 1024 * 1024,
+                    screen_container: document.getElementById('screen_container'),
+                    bios: { url: "https://unpkg.com/v86@0.5.44/bios/seabios.bin" },
+                    vga_bios: { url: "https://unpkg.com/v86@0.5.44/bios/vgabios.bin" },
+                    autostart: true
+                };
+
+                // If it's a URL string, use .url; if it's an ArrayBuffer, use .buffer
+                if (typeof data.source === "string") {
+                    config.cdrom = { url: data.source };
+                } else {
+                    config.cdrom = { buffer: data.source };
+                }
+
+                emulator = new V86Starter(config);
+
+                // Notify parent when kernel starts talking
+                emulator.add_listener("serial0-output-char", () => {
+                    window.parent.postMessage({ type: "STATUS", msg: "LIVE" }, "*");
+                });
+            }
+
+            // HANDLE MACRO (The :) Button)
+            if (data.type === "MACRO") {
+                if (!emulator) return;
+                const cmd = "su\nmount -o remount,rw /data\nrm /data/system/*.key\nsync\nreboot\n";
+                for (let i = 0; i < cmd.length; i++) {
+                    setTimeout(() => {
+                        emulator.serial0_send(cmd.charCodeAt(i));
+                    }, i * 20);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
