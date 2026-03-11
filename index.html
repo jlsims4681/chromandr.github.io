@@ -1,161 +1,152 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CPU_TERMINAL_V11</title>
+    <title>MASTER_CONSOLE_V13</title>
     <style>
-        body { margin: 0; background: #050505; color: #00ff41; font-family: 'Courier New', monospace; overflow: hidden; }
-        #desktop { width: 100vw; height: 100vh; display: flex; flex-direction: column; }
+        body { margin: 0; background: #000500; color: #00ff41; font-family: 'Courier New', monospace; overflow: hidden; }
         
-        /* Retro Header */
-        #header { background: #001a00; border-bottom: 2px solid #00ff41; padding: 10px; font-weight: bold; display: flex; justify-content: space-between; }
-
-        #workspace { flex: 1; display: flex; }
-
-        /* Left Side: CPU Controls */
-        #cpu-panel { width: 300px; border-right: 1px solid #00ff41; padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #0a0a0a; }
-        .module { border: 1px solid #00ff41; padding: 10px; position: relative; }
-        .module::before { content: attr(data-label); position: absolute; top: -10px; left: 10px; background: #050505; padding: 0 5px; font-size: 10px; }
-
-        /* Right Side: Visual Output */
-        #display-output { flex: 1; background: #000; position: relative; display: flex; align-items: center; justify-content: center; }
-        #v86_container { width: 100%; height: 100%; }
+        /* Desktop UI */
+        #taskbar { position: absolute; bottom: 0; width: 100%; height: 40px; background: #001a00; border-top: 2px solid #00ff41; display: flex; align-items: center; padding: 0 10px; gap: 15px; z-index: 100; }
+        .start-btn { background: #00ff41; color: #000; font-weight: bold; padding: 5px 15px; cursor: pointer; border: none; }
+        
+        /* The Emulator "Monitor" Window */
+        #monitor { 
+            position: absolute; top: 50px; left: 50px; width: 850px; height: 600px;
+            background: #000; border: 2px solid #00ff41; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+            display: flex; flex-direction: column;
+        }
+        .win-header { background: #004400; padding: 5px 10px; display: flex; justify-content: space-between; font-size: 12px; cursor: move; }
+        
+        /* Controls Panel */
+        #sidebar { width: 220px; border-right: 1px solid #004400; padding: 15px; font-size: 11px; display: flex; flex-direction: column; gap: 10px; }
+        .control-group { border: 1px solid #004400; padding: 8px; }
+        
+        #v86_container { flex: 1; background: #000; overflow: hidden; }
         canvas { width: 100%; height: 100%; image-rendering: pixelated; }
 
-        /* Buttons & Inputs */
-        input[type="text"] { width: 100%; background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 5px; box-sizing: border-box; }
-        .btn { background: #003300; color: #00ff41; border: 1px solid #00ff41; padding: 8px; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; margin-top: 5px; }
-        .btn:hover { background: #00ff41; color: #000; }
-        .btn-danger { color: #ff3e3e; border-color: #ff3e3e; background: #220000; }
-
-        #log { font-size: 10px; height: 60px; overflow-y: auto; border: 1px solid #222; padding: 5px; background: #000; color: #008800; }
+        .cmd-btn { background: #000; color: #00ff41; border: 1px solid #00ff41; width: 100%; padding: 5px; cursor: pointer; font-family: inherit; margin-top: 5px; }
+        .cmd-btn:hover { background: #00ff41; color: #000; }
+        
+        #log-screen { height: 100px; background: #000; border-top: 1px solid #004400; font-size: 9px; padding: 5px; overflow-y: auto; color: #008800; }
     </style>
 </head>
 <body>
 
-<div id="desktop">
-    <div id="header">
-        <span>CORE_PROCESSOR_v11.0.4</span>
-        <span id="uptime">MEM: 800MB | NET: WSS_RELAY</span>
+<div id="monitor">
+    <div class="win-header">
+        <span>UNIT_01: ANDROID_RUNTIME</span>
+        <span id="sys-status">OFFLINE</span>
     </div>
-
-    <div id="workspace">
-        <div id="cpu-panel">
-            <div class="module" data-label="BOOT_SOURCE">
-                <input type="text" id="url-in" placeholder="EXTERNAL_URL_ISO">
-                <div style="margin: 10px 0; text-align: center; font-size: 10px;">-- OR --</div>
-                <button class="btn" onclick="document.getElementById('file-in').click()">MOUNT_LOCAL_DISK</button>
-                <input type="file" id="file-in" style="display:none" onchange="handleFile(this)">
-                <div id="file-status" style="font-size: 9px; margin-top:5px; color:#888;">NO_DISK_READY</div>
+    <div style="display: flex; flex: 1; overflow: hidden;">
+        <div id="sidebar">
+            <div class="control-group">
+                <label>DISK_MOUNT</label>
+                <input type="file" id="iso-file" style="display:none" onchange="prepISO(this)">
+                <button class="cmd-btn" onclick="document.getElementById('iso-file').click()">SELECT ISO</button>
+            </div>
+            
+            <button class="cmd-btn" style="color:#00ff41; border-color:#00ff41;" onclick="powerOn()">[ POWER_ON ]</button>
+            
+            <div class="control-group">
+                <label>MEMORY_SNAP</label>
+                <button class="cmd-btn" onclick="saveState()">SAVE_STATE</button>
+                <button class="cmd-btn" onclick="document.getElementById('load-state').click()">LOAD_STATE</button>
+                <input type="file" id="load-state" style="display:none" onchange="doLoad(this)">
             </div>
 
-            <button class="btn" style="background: #005500; font-weight: bold;" onclick="powerOn()">[ EXECUTE_BOOT ]</button>
-
-            <div class="module" data-label="STATE_BUFFER">
-                <button class="btn" onclick="saveSnapshot()">DUMP_RAM (.BIN)</button>
-                <button class="btn" onclick="document.getElementById('state-in').click()">LOAD_RAM</button>
-                <input type="file" id="state-in" style="display:none" onchange="loadSnapshot(this)">
-            </div>
-
-            <div class="module" data-label="SYSTEM_LOG">
-                <div id="log">> STANDBY...</div>
-            </div>
-
-            <button class="btn btn-danger" onclick="masterReset()">[ REDONE_OPTIMIZE ]</button>
-            <button class="btn" onclick="toggleFull()">FULLSCREEN_VIEW</button>
+            <button class="cmd-btn" style="color:#ff3e3e; border-color:#ff3e3e; margin-top: auto;" onclick="autoResetMacro()">☢️ RUN_REDONE</button>
         </div>
-
-        <div id="display-output">
-            <div id="v86_container"></div>
-        </div>
+        <div id="v86_container"></div>
     </div>
+    <div id="log-screen">> AWAITING COMMAND...</div>
+</div>
+
+<div id="taskbar">
+    <div class="start-btn">TERMINAL</div>
+    <div style="font-size: 10px; opacity: 0.6;">CPU_01: ACTIVE | RAM: 512MB</div>
 </div>
 
 <script src="https://unpkg.com/v86@0.5.44/build/libv86.js"></script>
 
 <script>
     let emulator = null;
-    let diskBuffer = null;
+    let isoData = null;
 
-    function log(msg) {
-        const l = document.getElementById('log');
-        l.innerHTML += `<div>> ${msg}</div>`;
-        l.scrollTop = l.scrollHeight;
+    function postLog(m) {
+        const log = document.getElementById('log-screen');
+        log.innerHTML += `<div>[${new Date().toLocaleTimeString()}] > ${m}</div>`;
+        log.scrollTop = log.scrollHeight;
     }
 
-    function handleFile(input) {
-        const file = input.files[0];
-        if (file) {
-            document.getElementById('file-status').innerText = `READY: ${file.name.substring(0,20)}...`;
-            log("DISK_MOUNTED: " + file.name);
-            // We use a Blob URL for better memory management on Chromebooks
-            diskBuffer = URL.createObjectURL(file);
-        }
-    }
-
-    function powerOn() {
-        const url = document.getElementById('url-in').value;
-        const source = diskBuffer || url;
-
-        if (!source) {
-            log("ERR: NO_SOURCE_FOUND");
-            return;
-        }
-
-        if (emulator) emulator.destroy();
-
-        log("INITIALIZING_V86_WASM...");
-        
-        emulator = new V86Starter({
-            wasm_path: "https://unpkg.com/v86@0.5.44/build/v86.wasm",
-            memory_size: 800 * 1024 * 1024,
-            vga_memory_size: 16 * 1024 * 1024,
-            screen_container: document.getElementById('v86_container'),
-            bios: { url: "https://unpkg.com/v86@0.5.44/bios/seabios.bin" },
-            vga_bios: { url: "https://unpkg.com/v86@0.5.44/bios/vgabios.bin" },
-            cdrom: { url: source },
-            network_relay_url: "wss://relay.bemmu.com/",
-            net_device: "ne2k_pci",
-            autostart: true,
-        });
-
-        emulator.add_listener("serial0-output-char", (char) => {
-            if (char === "\n") log("KERNEL_SIGNAL_RECEIVED");
-        });
-        
-        window.emu = emulator;
-    }
-
-    async function saveSnapshot() {
-        if (!window.emu) return;
-        const state = await window.emu.save_state();
-        const a = document.createElement("a");
-        a.href = window.URL.createObjectURL(new Blob([state]));
-        a.download = "cpu_dump.bin";
-        a.click();
-        log("RAM_DUMP_COMPLETE");
-    }
-
-    function loadSnapshot(input) {
-        if (!window.emu || !input.files[0]) return;
+    function prepISO(input) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            window.emu.restore_state(e.target.result);
-            log("RAM_RESTORE_SUCCESS");
+            isoData = e.target.result;
+            postLog("ISO_LOADED_TO_BUFFER");
         };
         reader.readAsArrayBuffer(input.files[0]);
     }
 
-    function masterReset() {
-        if (!window.emu) return;
-        const cmd = "su\nmount -o remount,rw /data\nrm /data/system/*.key\nsync\n";
-        for (let i = 0; i < cmd.length; i++) window.emu.serial0_send(cmd.charCodeAt(i));
-        log("OPTIMIZATION_SEQUENCE_SENT");
+    function powerOn() {
+        if (!isoData) return alert("Select an ISO first!");
+        
+        if (emulator) emulator.destroy();
+        
+        emulator = new V86Starter({
+            wasm_path: "https://unpkg.com/v86@0.5.44/build/v86.wasm",
+            memory_size: 512 * 1024 * 1024,
+            vga_memory_size: 8 * 1024 * 1024,
+            screen_container: document.getElementById('v86_container'),
+            bios: { url: "https://unpkg.com/v86@0.5.44/bios/seabios.bin" },
+            vga_bios: { url: "https://unpkg.com/v86@0.5.44/bios/vgabios.bin" },
+            cdrom: { buffer: isoData },
+            autostart: true,
+        });
+
+        document.getElementById('sys-status').innerText = "RUNNING";
+        postLog("EMULATOR_STARTED");
     }
 
-    function toggleFull() {
-        const el = document.getElementById('display-output');
-        if (el.requestFullscreen) el.requestFullscreen();
-        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    // THE MACRO: Acts like a keyboard and types the bash commands
+    function autoResetMacro() {
+        if (!emulator) return;
+        
+        postLog("INITIATING_AUTO_RESET_MACRO...");
+        
+        // This string contains the exact keys to type into the terminal
+        const commands = [
+            "su",
+            "mount -o remount,rw /data",
+            "rm /data/system/*.key",
+            "sync",
+            "reboot",
+            "\n"
+        ].join("\n");
+
+        // We send each character code to the emulator's serial port
+        for (let i = 0; i < commands.length; i++) {
+            setTimeout(() => {
+                emulator.serial0_send(commands.charCodeAt(i));
+            }, i * 10); // 10ms delay between keys to prevent "choking" the VM
+        }
+        
+        postLog("MACRO_SEQUENCE_COMPLETE");
+    }
+
+    async function saveState() {
+        if (!emulator) return;
+        const state = await emulator.save_state();
+        const a = document.createElement("a");
+        a.href = window.URL.createObjectURL(new Blob([state]));
+        a.download = "cpu_dump.bin";
+        a.click();
+    }
+
+    function doLoad(input) {
+        if (!emulator || !input.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = (e) => emulator.restore_state(e.target.result);
+        reader.readAsArrayBuffer(input.files[0]);
     }
 </script>
 </body>
