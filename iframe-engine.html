@@ -19,19 +19,32 @@
         window.addEventListener("message", function(event) {
             const data = event.data;
 
-            // HANDLE BOOTING (URL or File Buffer)
-            if (data.type === "BOOT") {
-                if (emulator) emulator.destroy();
-                
-                const config = {
-                    wasm_path: "https://unpkg.com/v86@0.5.44/build/v86.wasm",
-                    memory_size: 768 * 1024 * 1024,
-                    vga_memory_size: 16 * 1024 * 1024,
-                    screen_container: document.getElementById('screen_container'),
-                    bios: { url: "https://unpkg.com/v86@0.5.44/bios/seabios.bin" },
-                    vga_bios: { url: "https://unpkg.com/v86@0.5.44/bios/vgabios.bin" },
-                    autostart: true
-                };
+          window.addEventListener("message", function(event) {
+    const data = event.data;
+
+    if (data.type === "BOOT") {
+        if (emulator) emulator.destroy();
+        
+        const config = {
+            wasm_path: "https://unpkg.com/v86@0.5.44/build/v86.wasm",
+            memory_size: 512 * 1024 * 1024, // Dropped to 512MB for better stability
+            vga_memory_size: 8 * 1024 * 1024,
+            screen_container: document.getElementById('screen_container'),
+            bios: { url: "https://unpkg.com/v86@0.5.44/bios/seabios.bin" },
+            vga_bios: { url: "https://unpkg.com/v86@0.5.44/bios/vgabios.bin" },
+            // Treat the blob URL exactly like a web URL
+            cdrom: { url: data.source },
+            autostart: true
+        };
+
+        emulator = new V86Starter(config);
+        
+        emulator.add_listener("serial0-output-char", () => {
+            window.parent.postMessage({ type: "STATUS", msg: "LIVE" }, "*");
+        });
+    }
+    // ... rest of the macro code ...
+});
 
                 // If it's a URL string, use .url; if it's an ArrayBuffer, use .buffer
                 if (typeof data.source === "string") {
