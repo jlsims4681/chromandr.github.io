@@ -1,61 +1,64 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Master Console v15</title>
+    <title>MASTER_CONSOLE_V16</title>
     <style>
-        body { margin: 0; background: #000500; color: #00ff41; font-family: monospace; display: flex; height: 100vh; }
-        #sidebar { width: 280px; border-right: 2px solid #00ff41; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: #001100; }
-        .btn { background: #000; color: #00ff41; border: 1px solid #00ff41; padding: 10px; cursor: pointer; font-family: inherit; width: 100%; }
+        body { margin: 0; background: #000500; color: #00ff41; font-family: monospace; display: flex; height: 100vh; overflow: hidden; }
+        
+        #sidebar { width: 280px; border-right: 2px solid #00ff41; padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #001100; }
+        .btn { background: #000; color: #00ff41; border: 1px solid #00ff41; padding: 12px; cursor: pointer; font-weight: bold; font-family: inherit; }
         .btn:hover { background: #00ff41; color: #000; }
-        input { background: #000; border: 1px solid #004400; color: #00ff41; padding: 5px; width: 100%; box-sizing: border-box; }
-        iframe { flex: 1; border: none; background: #000; }
-        #status { font-size: 10px; color: red; }
+        .btn-red { border-color: #ff3e3e; color: #ff3e3e; margin-top: auto; }
+        
+        #display-area { flex: 1; position: relative; background: #000; }
+        iframe { width: 100%; height: 100%; border: none; }
+        
+        .status-box { font-size: 10px; border: 1px solid #004400; padding: 5px; background: #000800; }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <h3>CPU_MAIN_CONSOLE</h3>
-        <div id="status">● OFFLINE</div>
-
-        <label style="font-size: 10px;">MOUNT_REMOTE_URL</label>
-        <input type="text" id="iso-url" placeholder="https://archive.org/...">
+        <h2>CONSOLE_V16</h2>
+        <div class="status-box">SYSTEM: CLOUD_WIN_10<br>ENGINE: NEVERINSTALL</div>
         
-        <label style="font-size: 10px;">MOUNT_LOCAL_FILE</label>
-        <input type="file" id="iso-file">
+        <label style="font-size: 10px;">NEVERINSTALL_URL</label>
+        <input type="text" id="target-url" placeholder="Paste Session URL..." 
+               style="background:#000; color:#00ff41; border:1px solid #004400; padding:5px;">
+        
+        <button class="btn" onclick="connectSession()">CONNECT_SESSION</button>
 
-        <button class="btn" onclick="boot()">▶ EXECUTE_BOOT</button>
-        <button class="btn" style="color:#ff3e3e; border-color:#ff3e3e; margin-top:20px;" onclick="runMacro()">☢️ RUN_REDONE</button>
+        <button class="btn btn-red" onclick="fireRedone()">☢️ RUN_REDONE</button>
+        <div id="log" style="font-size: 9px; color: #008800;">> READY</div>
     </div>
 
-    <iframe id="engine" src="iframe-engine.html"></iframe>
+    <div id="display-area">
+        <iframe id="main-frame" src="about:blank"></iframe>
+    </div>
 
     <script>
-        const frame = document.getElementById('engine').contentWindow;
-function boot() {
-    const url = document.getElementById('iso-url').value;
-    const fileInput = document.getElementById('iso-file').files[0];
-
-    if (fileInput) {
-        // Create a pointer instead of copying the whole file
-        const blobUrl = URL.createObjectURL(fileInput);
-        frame.postMessage({ type: "BOOT", source: blobUrl }, "*");
-        console.log("Local ISO mounted via Blob URL");
-    } else if (url) {
-        frame.postMessage({ type: "BOOT", source: url }, "*");
-    }
-}
-
-        function runMacro() {
-            frame.postMessage({ type: "MACRO" }, "*");
+        function connectSession() {
+            const url = document.getElementById('target-url').value;
+            if(url) {
+                document.getElementById('main-frame').src = url;
+                document.getElementById('log').innerText = "> CONNECTED_TO_STREAM";
+            }
         }
 
-        window.addEventListener("message", (e) => {
-            if (e.data.type === "STATUS") {
-                document.getElementById('status').style.color = "#00ff41";
-                document.getElementById('status').innerText = "● KERNEL_LIVE";
+        async function fireRedone() {
+            document.getElementById('log').innerText = "> SENDING_REMOTE_SIGNAL...";
+            
+            // This attempts to talk to the Python script running inside the VM
+            // Note: You may need a service like 'ngrok' to expose the VM port to GitHub
+            try {
+                const response = await fetch('http://YOUR_VM_IP:5000/redone');
+                const result = await response.text();
+                document.getElementById('log').innerText = "> " + result;
+            } catch (err) {
+                document.getElementById('log').innerText = "> ERROR: BRIDGE_NOT_FOUND";
+                console.error(err);
             }
-        });
+        }
     </script>
 </body>
 </html>
