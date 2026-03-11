@@ -32,23 +32,19 @@
 
     <script>
         const frame = document.getElementById('engine').contentWindow;
+function boot() {
+    const url = document.getElementById('iso-url').value;
+    const fileInput = document.getElementById('iso-file').files[0];
 
-        function boot() {
-            const url = document.getElementById('iso-url').value;
-            const fileInput = document.getElementById('iso-file').files[0];
-
-            if (fileInput) {
-                // OPTION A: Convert Local File to Buffer
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    frame.postMessage({ type: "BOOT", source: e.target.result }, "*");
-                };
-                reader.readAsArrayBuffer(fileInput);
-            } else if (url) {
-                // OPTION B: Send the URL string
-                frame.postMessage({ type: "BOOT", source: url }, "*");
-            }
-        }
+    if (fileInput) {
+        // Create a pointer instead of copying the whole file
+        const blobUrl = URL.createObjectURL(fileInput);
+        frame.postMessage({ type: "BOOT", source: blobUrl }, "*");
+        console.log("Local ISO mounted via Blob URL");
+    } else if (url) {
+        frame.postMessage({ type: "BOOT", source: url }, "*");
+    }
+}
 
         function runMacro() {
             frame.postMessage({ type: "MACRO" }, "*");
