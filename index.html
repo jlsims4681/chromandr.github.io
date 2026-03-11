@@ -1,153 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>MASTER_CONSOLE_V13</title>
+    <title>Master Console v14 - Iframe Edition</title>
     <style>
-        body { margin: 0; background: #000500; color: #00ff41; font-family: 'Courier New', monospace; overflow: hidden; }
+        body { margin: 0; background: #000500; color: #00ff41; font-family: monospace; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Desktop UI */
-        #taskbar { position: absolute; bottom: 0; width: 100%; height: 40px; background: #001a00; border-top: 2px solid #00ff41; display: flex; align-items: center; padding: 0 10px; gap: 15px; z-index: 100; }
-        .start-btn { background: #00ff41; color: #000; font-weight: bold; padding: 5px 15px; cursor: pointer; border: none; }
+        #sidebar { width: 250px; border-right: 2px solid #00ff41; padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #001100; }
+        .btn { background: #000; color: #00ff41; border: 1px solid #00ff41; padding: 10px; cursor: pointer; text-transform: uppercase; font-weight: bold; }
+        .btn:hover { background: #00ff41; color: #000; }
         
-        /* The Emulator "Monitor" Window */
-        #monitor { 
-            position: absolute; top: 50px; left: 50px; width: 850px; height: 600px;
-            background: #000; border: 2px solid #00ff41; box-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
-            display: flex; flex-direction: column;
-        }
-        .win-header { background: #004400; padding: 5px 10px; display: flex; justify-content: space-between; font-size: 12px; cursor: move; }
-        
-        /* Controls Panel */
-        #sidebar { width: 220px; border-right: 1px solid #004400; padding: 15px; font-size: 11px; display: flex; flex-direction: column; gap: 10px; }
-        .control-group { border: 1px solid #004400; padding: 8px; }
-        
-        #v86_container { flex: 1; background: #000; overflow: hidden; }
-        canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-
-        .cmd-btn { background: #000; color: #00ff41; border: 1px solid #00ff41; width: 100%; padding: 5px; cursor: pointer; font-family: inherit; margin-top: 5px; }
-        .cmd-btn:hover { background: #00ff41; color: #000; }
-        
-        #log-screen { height: 100px; background: #000; border-top: 1px solid #004400; font-size: 9px; padding: 5px; overflow-y: auto; color: #008800; }
+        #monitor-frame { flex: 1; border: none; } /* The actual iframe */
     </style>
 </head>
 <body>
 
-<div id="monitor">
-    <div class="win-header">
-        <span>UNIT_01: ANDROID_RUNTIME</span>
-        <span id="sys-status">OFFLINE</span>
+    <div id="sidebar">
+        <h2>MASTER_CONSOLE</h2>
+        <p style="font-size: 10px; opacity: 0.7;">IFRAME ENGINE ACTIVE</p>
+        
+        <button class="btn" style="color:#ff3e3e; border-color:#ff3e3e; margin-top: auto;" onclick="fireMacro()">
+             sim(TYPER)
+        </button>
     </div>
-    <div style="display: flex; flex: 1; overflow: hidden;">
-        <div id="sidebar">
-            <div class="control-group">
-                <label>DISK_MOUNT</label>
-                <input type="file" id="iso-file" style="display:none" onchange="prepISO(this)">
-                <button class="cmd-btn" onclick="document.getElementById('iso-file').click()">SELECT ISO</button>
-            </div>
+
+    <iframe id="monitor-frame" src="iframe-engine.html"></iframe>
+
+    <script>
+        function fireMacro() {
+            // Get the iframe window
+            const vMFrame = document.getElementById('monitor-frame').contentWindow;
             
-            <button class="cmd-btn" style="color:#00ff41; border-color:#00ff41;" onclick="powerOn()">[ POWER_ON ]</button>
             
-            <div class="control-group">
-                <label>MEMORY_SNAP</label>
-                <button class="cmd-btn" onclick="saveState()">SAVE_STATE</button>
-                <button class="cmd-btn" onclick="document.getElementById('load-state').click()">LOAD_STATE</button>
-                <input type="file" id="load-state" style="display:none" onchange="doLoad(this)">
-            </div>
-
-            <button class="cmd-btn" style="color:#ff3e3e; border-color:#ff3e3e; margin-top: auto;" onclick="autoResetMacro()">☢️ RUN_REDONE</button>
-        </div>
-        <div id="v86_container"></div>
-    </div>
-    <div id="log-screen">> AWAITING COMMAND...</div>
-</div>
-
-<div id="taskbar">
-    <div class="start-btn">TERMINAL</div>
-    <div style="font-size: 10px; opacity: 0.6;">CPU_01: ACTIVE | RAM: 512MB</div>
-</div>
-
-<script src="https://unpkg.com/v86@0.5.44/build/libv86.js"></script>
-
-<script>
-    let emulator = null;
-    let isoData = null;
-
-    function postLog(m) {
-        const log = document.getElementById('log-screen');
-        log.innerHTML += `<div>[${new Date().toLocaleTimeString()}] > ${m}</div>`;
-        log.scrollTop = log.scrollHeight;
-    }
-
-    function prepISO(input) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            isoData = e.target.result;
-            postLog("ISO_LOADED_TO_BUFFER");
-        };
-        reader.readAsArrayBuffer(input.files[0]);
-    }
-
-    function powerOn() {
-        if (!isoData) return alert("Select an ISO first!");
-        
-        if (emulator) emulator.destroy();
-        
-        emulator = new V86Starter({
-            wasm_path: "https://unpkg.com/v86@0.5.44/build/v86.wasm",
-            memory_size: 512 * 1024 * 1024,
-            vga_memory_size: 8 * 1024 * 1024,
-            screen_container: document.getElementById('v86_container'),
-            bios: { url: "https://unpkg.com/v86@0.5.44/bios/seabios.bin" },
-            vga_bios: { url: "https://unpkg.com/v86@0.5.44/bios/vgabios.bin" },
-            cdrom: { buffer: isoData },
-            autostart: true,
-        });
-
-        document.getElementById('sys-status').innerText = "RUNNING";
-        postLog("EMULATOR_STARTED");
-    }
-
-    // THE MACRO: Acts like a keyboard and types the bash commands
-    function autoResetMacro() {
-        if (!emulator) return;
-        
-        postLog("INITIATING_AUTO_RESET_MACRO...");
-        
-        // This string contains the exact keys to type into the terminal
-        const commands = [
-            "su",
-            "mount -o remount,rw /data",
-            "rm /data/system/*.key",
-            "sync",
-            "reboot",
-            "\n"
-        ].join("\n");
-
-        // We send each character code to the emulator's serial port
-        for (let i = 0; i < commands.length; i++) {
-            setTimeout(() => {
-                emulator.serial0_send(commands.charCodeAt(i));
-            }, i * 10); // 10ms delay between keys to prevent "choking" the VM
+            vMFrame.postMessage("TRIGGER_REDONE", "*");
+            
+            console.log("Pinging the iframe to start typing...");
         }
-        
-        postLog("MACRO_SEQUENCE_COMPLETE");
-    }
-
-    async function saveState() {
-        if (!emulator) return;
-        const state = await emulator.save_state();
-        const a = document.createElement("a");
-        a.href = window.URL.createObjectURL(new Blob([state]));
-        a.download = "cpu_dump.bin";
-        a.click();
-    }
-
-    function doLoad(input) {
-        if (!emulator || !input.files[0]) return;
-        const reader = new FileReader();
-        reader.onload = (e) => emulator.restore_state(e.target.result);
-        reader.readAsArrayBuffer(input.files[0]);
-    }
-</script>
+    </script>
 </body>
 </html>
